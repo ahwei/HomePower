@@ -53,12 +53,12 @@ A full-stack home energy management dashboard with AI-powered electricity bill o
 | 5 | **OpenAI API** | AI Chat | https://platform.openai.com/api-keys | 依用量計費 |
 | 6 | **Tavily API** | AI 網路搜尋 | https://tavily.com | 免費 1,000 次/月 |
 
-> 詳細申請步驟請參考 `.env.local.example` 內的註解說明。
+> 詳細申請步驟請參考 `.env.example` 內的註解說明。
 
 ### Environment Variables
 
 ```bash
-cp .env.local.example .env.local
+cp .env.example .env.local
 # 編輯 .env.local 填入各服務的 API Key
 ```
 
