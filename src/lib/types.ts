@@ -91,6 +91,16 @@ export interface GridStatus {
   supplyCapacityMW: number;
   currentLoadMW: number;
   reserveMarginPercent: number;
+  usagePercent: number;
+  reserveCapacityMW: number;
+  forecastPeakLoadMW: number;
+  peakHourRange: string;
+  publishTime: string;
+  yesterday: {
+    supplyCapacityMW: number;
+    peakLoadMW: number;
+    reserveRate: number;
+  };
   updatedAt: string;
 }
 

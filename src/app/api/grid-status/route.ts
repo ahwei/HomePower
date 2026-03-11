@@ -50,17 +50,20 @@ export async function GET() {
       );
     }
 
-    // records[0]: 即時負載 { curr_load, curr_util_rate }
-    // records[1]: 今日預估 { fore_maxi_sply_capacity, fore_peak_dema_load, fore_peak_resv_rate, fore_peak_resv_indicator }
+    // records[0]: 即時負載
+    // records[1]: 今日預估
+    // records[2]: 昨日實績
     const current = records[0];
     const forecast = records[1];
+    const yesterday = records[2];
 
     const supplyCapacityMW = parseFloat(forecast.fore_maxi_sply_capacity) || 0;
     const currentLoadMW = parseFloat(current.curr_load) || 0;
-    const reserveMarginPercent =
-      parseFloat(forecast.fore_peak_resv_rate) || 0;
+    const reserveMarginPercent = parseFloat(forecast.fore_peak_resv_rate) || 0;
+    const usagePercent = parseFloat(current.curr_util_rate) || 0;
+    const reserveCapacityMW = parseFloat(forecast.fore_peak_resv_capacity) || 0;
+    const forecastPeakLoadMW = parseFloat(forecast.fore_peak_dema_load) || 0;
 
-    // 優先使用台電官方燈號，fallback 用自算
     const status = forecast.fore_peak_resv_indicator
       ? indicatorToLevel(forecast.fore_peak_resv_indicator)
       : getStatusLevel(reserveMarginPercent);
@@ -70,6 +73,16 @@ export async function GET() {
       supplyCapacityMW: Math.round(supplyCapacityMW),
       currentLoadMW: Math.round(currentLoadMW),
       reserveMarginPercent: Number(reserveMarginPercent.toFixed(2)),
+      usagePercent,
+      reserveCapacityMW: Math.round(reserveCapacityMW),
+      forecastPeakLoadMW: Math.round(forecastPeakLoadMW),
+      peakHourRange: forecast.fore_peak_hour_range ?? "",
+      publishTime: forecast.publish_time ?? "",
+      yesterday: {
+        supplyCapacityMW: Math.round(parseFloat(yesterday?.yday_maxi_sply_capacity) || 0),
+        peakLoadMW: Math.round(parseFloat(yesterday?.yday_peak_dema_load) || 0),
+        reserveRate: parseFloat(yesterday?.yday_peak_resv_rate) || 0,
+      },
       updatedAt: new Date().toISOString(),
     };
 
