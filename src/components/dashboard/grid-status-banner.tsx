@@ -1,6 +1,6 @@
 "use client";
 
-import { useGridStatus } from "../hooks/use-grid-status";
+import { useGridStatus } from "@/hooks/use-grid-status";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { GridStatusLevel } from "@/lib/types";
 

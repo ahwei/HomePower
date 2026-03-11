@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import type { WeatherForecast } from "@/lib/types";
-import { useAppSelector } from "@/lib/store/hooks";
+import { useAppSelector } from "@/hooks/use-store";
 
 const POLL_INTERVAL = 3_600_000; // 1 小時
 

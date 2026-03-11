@@ -1,6 +1,6 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { PlanType } from "@/lib/types";
-import { isSummerMonth } from "@/lib/constants/electricity-plans";
+import { isSummerMonth } from "@/constants/electricity-plans";
 
 interface SettingsState {
   planType: PlanType;

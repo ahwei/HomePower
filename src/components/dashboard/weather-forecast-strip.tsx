@@ -3,7 +3,7 @@
 import { Sun, Cloud, CloudRain, CloudSnow, CloudDrizzle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useWeather } from "../hooks/use-weather";
+import { useWeather } from "@/hooks/use-weather";
 import type { WeatherForecast } from "@/lib/types";
 
 const DAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];

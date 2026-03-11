@@ -1,10 +1,10 @@
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { GridStatusBanner } from "@/features/dashboard/components/grid-status-banner";
-import { EnergyOverviewCards } from "@/features/dashboard/components/energy-overview-cards";
-import { DeviceConsumptionChart } from "@/features/dashboard/components/device-consumption-chart";
-import { DailyUsageChart } from "@/features/dashboard/components/daily-usage-chart";
-import { WeatherForecastStrip } from "@/features/dashboard/components/weather-forecast-strip";
+import { GridStatusBanner } from "@/components/dashboard/grid-status-banner";
+import { EnergyOverviewCards } from "@/components/dashboard/energy-overview-cards";
+import { DeviceConsumptionChart } from "@/components/dashboard/device-consumption-chart";
+import { DailyUsageChart } from "@/components/dashboard/daily-usage-chart";
+import { WeatherForecastStrip } from "@/components/dashboard/weather-forecast-strip";
 
 export default function DashboardPage() {
   return (

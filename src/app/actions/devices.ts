@@ -1,8 +1,8 @@
 "use server";
 
 import { eq, and, desc } from "drizzle-orm";
-import { db } from "@/lib/db";
-import { devices } from "@/lib/db/schema";
+import { db } from "@/db";
+import { devices } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 
 /** 取得當前登入 user ID */

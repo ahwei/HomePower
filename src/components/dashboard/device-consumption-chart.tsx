@@ -9,7 +9,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAppSelector } from "@/lib/store/hooks";
+import { useAppSelector } from "@/hooks/use-store";
 import { computeMonthlyKwh } from "@/lib/types";
 import type { DeviceCategory } from "@/lib/types";
 

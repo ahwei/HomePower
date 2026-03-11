@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { calculateBill } from "@/features/billing/utils/calculate-bill";
+import { calculateBill } from "@/components/billing/calculate-bill";
 import type { PlanType } from "@/lib/types";
 
 const VALID_PLAN_TYPES: PlanType[] = [

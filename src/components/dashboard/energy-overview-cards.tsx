@@ -3,11 +3,11 @@
 import { useMemo } from "react";
 import { Zap, Receipt, Leaf } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAppSelector } from "@/lib/store/hooks";
+import { useAppSelector } from "@/hooks/use-store";
 import { computeMonthlyKwh } from "@/lib/types";
-import { calculateResidentialBill } from "@/features/billing/utils/calculate-bill";
-import { isSummerMonth } from "@/lib/constants/electricity-plans";
-import { CO2_FACTOR_KG_PER_KWH } from "@/lib/constants/device-presets";
+import { calculateResidentialBill } from "@/components/billing/calculate-bill";
+import { isSummerMonth } from "@/constants/electricity-plans";
+import { CO2_FACTOR_KG_PER_KWH } from "@/constants/device-presets";
 
 export function EnergyOverviewCards() {
   const devices = useAppSelector((s) => s.devices.items);

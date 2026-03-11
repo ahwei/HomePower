@@ -1,5 +1,5 @@
 import type { BillResult, PlanType, TierBreakdown } from "@/lib/types";
-import { ELECTRICITY_PLANS } from "@/lib/constants/electricity-plans";
+import { ELECTRICITY_PLANS } from "@/constants/electricity-plans";
 
 /**
  * 住宅累進電價計算
