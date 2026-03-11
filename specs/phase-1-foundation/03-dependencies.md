@@ -11,7 +11,21 @@
 ```bash
 pnpm add @reduxjs/toolkit react-redux   # RTK 狀態管理
 pnpm add recharts                        # 圖表
-pnpm add ai @ai-sdk/openai              # Vercel AI SDK + OpenAI provider
+pnpm add ai @ai-sdk/react @ai-sdk/openai  # AI SDK + React hooks + OpenAI provider
+```
+
+### AI SDK Elements（shadcn registry 安裝）
+
+Chat UI 使用 AI SDK Elements（https://elements.ai-sdk.dev/），透過 shadcn CLI 安裝到 `@/components/ai-elements/`：
+
+```bash
+# 在 Phase 5 (Task #21) 時安裝，這裡先記錄
+npx shadcn@latest add "https://elements.ai-sdk.dev/r/conversation.json"
+npx shadcn@latest add "https://elements.ai-sdk.dev/r/message.json"
+npx shadcn@latest add "https://elements.ai-sdk.dev/r/prompt-input.json"
+npx shadcn@latest add "https://elements.ai-sdk.dev/r/suggestion.json"
+npx shadcn@latest add "https://elements.ai-sdk.dev/r/reasoning.json"
+npx shadcn@latest add "https://elements.ai-sdk.dev/r/tool.json"
 ```
 
 ### 已安裝（不需重複）
@@ -32,4 +46,4 @@ pnpm add ai @ai-sdk/openai              # Vercel AI SDK + OpenAI provider
 
 - [ ] `pnpm install` 無錯誤
 - [ ] `pnpm build` 通過
-- [ ] package.json 包含 @reduxjs/toolkit, react-redux, recharts, ai, @ai-sdk/openai
+- [ ] package.json 包含 @reduxjs/toolkit, react-redux, recharts, ai, @ai-sdk/react, @ai-sdk/openai
