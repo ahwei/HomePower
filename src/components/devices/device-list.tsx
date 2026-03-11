@@ -12,19 +12,37 @@ interface DeviceListProps {
 }
 
 export function DeviceList({ onAddClick }: DeviceListProps) {
-  const { devices, loading, toggle, remove } = useDevices();
+  const { devices, loading, error, toggle, remove } = useDevices();
 
   const activeCount = devices.filter((d) => d.isActive).length;
   const totalKwh = devices
     .filter((d) => d.isActive)
     .reduce((sum, d) => sum + computeMonthlyKwh(d), 0);
 
-  if (loading) {
+  if (loading && devices.length === 0) {
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 3 }, (_, i) => (
           <Skeleton key={i} className="h-28 rounded-lg" />
         ))}
+      </div>
+    );
+  }
+
+  if (error && devices.length === 0) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div />
+          <Button size="sm" onClick={onAddClick}>
+            <Plus className="mr-1 h-4 w-4" />
+            新增設備
+          </Button>
+        </div>
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center text-muted-foreground">
+          <p className="font-medium">載入失敗</p>
+          <p className="mt-1 text-sm">{error}</p>
+        </div>
       </div>
     );
   }
