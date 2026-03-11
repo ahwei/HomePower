@@ -6,6 +6,7 @@ import {
   Receipt,
   MessageSquare,
   LogOut,
+  Fingerprint,
   Zap,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
@@ -51,11 +52,16 @@ export function AppSidebar({ user }: { user: User | null }) {
     router.push("/login");
   };
 
-  const displayName =
-    user?.user_metadata?.full_name ||
-    user?.user_metadata?.name ||
-    user?.email ||
-    "User";
+  const handleRegisterPasskey = async () => {
+    const { error } = await supabase.auth.mfa.webauthn.register({
+      friendlyName: `${user?.email ?? "user"}-passkey`,
+    });
+    if (error) {
+      console.error("Passkey registration failed:", error.message);
+    }
+  };
+
+  const displayName = user?.email || "User";
   const avatarUrl = user?.user_metadata?.avatar_url;
   const initials = displayName
     .split(" ")
@@ -128,6 +134,10 @@ export function AppSidebar({ user }: { user: User | null }) {
                 }
               />
               <DropdownMenuContent side="top" align="start" className="w-56">
+                <DropdownMenuItem onClick={handleRegisterPasskey}>
+                  <Fingerprint className="mr-2 h-4 w-4" />
+                  註冊 Passkey
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />
                   登出
