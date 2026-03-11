@@ -4,13 +4,29 @@ import type { GridStatus, GridStatusLevel } from "@/lib/types";
 export const revalidate = 300; // 5 分鐘
 
 const TAIPOWER_URL =
-  "https://data.taipower.com.tw/opendata/apply/file/d006001/001.json";
+  "https://www.taipower.com.tw/d006/loadGraph/loadGraph/data/loadpara.json";
 
 function getStatusLevel(reservePercent: number): GridStatusLevel {
   if (reservePercent >= 10) return "green";
   if (reservePercent >= 6) return "yellow";
   if (reservePercent >= 3) return "orange";
   return "red";
+}
+
+// 燈號指標對應: G=green, Y=yellow, O=orange, R=red
+function indicatorToLevel(indicator: string): GridStatusLevel {
+  switch (indicator) {
+    case "G":
+      return "green";
+    case "Y":
+      return "yellow";
+    case "O":
+      return "orange";
+    case "R":
+      return "red";
+    default:
+      return "green";
+  }
 }
 
 export async function GET() {
@@ -25,55 +41,35 @@ export async function GET() {
     }
 
     const raw = await res.json();
+    const records = raw?.records;
 
-    // 台電 API 回傳格式解析
-    // 主要欄位在 aaData 陣列，最後一筆為總計
-    const records = raw?.aaData;
-    if (!Array.isArray(records) || records.length === 0) {
+    if (!Array.isArray(records) || records.length < 2) {
       return NextResponse.json(
         { error: "資料格式錯誤" },
         { status: 502 }
       );
     }
 
-    // 取得供電資訊 — 從台電 JSON 的 summary 或自行計算
-    // 嘗試從 JSON 結構取出總供電量與負載
-    let supplyCapacityMW = 0;
-    let currentLoadMW = 0;
+    // records[0]: 即時負載 { curr_load, curr_util_rate }
+    // records[1]: 今日預估 { fore_maxi_sply_capacity, fore_peak_dema_load, fore_peak_resv_rate, fore_peak_resv_indicator }
+    const current = records[0];
+    const forecast = records[1];
 
-    for (const record of records) {
-      // 每筆 record: [機組名稱, 裝置容量, 淨發電量, ...]
-      // 最後一筆通常為合計
-      const capacity = parseFloat(record[1]);
-      const generation = parseFloat(record[2]);
-      if (!isNaN(capacity)) supplyCapacityMW += capacity;
-      if (!isNaN(generation)) currentLoadMW += generation;
-    }
+    const supplyCapacityMW = parseFloat(forecast.fore_maxi_sply_capacity) || 0;
+    const currentLoadMW = parseFloat(current.curr_load) || 0;
+    const reserveMarginPercent =
+      parseFloat(forecast.fore_peak_resv_rate) || 0;
 
-    // 如果解析失敗，嘗試備用欄位
-    if (supplyCapacityMW === 0 || currentLoadMW === 0) {
-      // 嘗試從最後一筆取合計
-      const last = records[records.length - 1];
-      supplyCapacityMW = parseFloat(last?.[1]) || 0;
-      currentLoadMW = parseFloat(last?.[2]) || 0;
-    }
-
-    if (supplyCapacityMW === 0) {
-      return NextResponse.json(
-        { error: "資料格式錯誤" },
-        { status: 502 }
-      );
-    }
-
-    const reserveMarginPercent = Number(
-      (((supplyCapacityMW - currentLoadMW) / supplyCapacityMW) * 100).toFixed(2)
-    );
+    // 優先使用台電官方燈號，fallback 用自算
+    const status = forecast.fore_peak_resv_indicator
+      ? indicatorToLevel(forecast.fore_peak_resv_indicator)
+      : getStatusLevel(reserveMarginPercent);
 
     const data: GridStatus = {
-      status: getStatusLevel(reserveMarginPercent),
+      status,
       supplyCapacityMW: Math.round(supplyCapacityMW),
       currentLoadMW: Math.round(currentLoadMW),
-      reserveMarginPercent,
+      reserveMarginPercent: Number(reserveMarginPercent.toFixed(2)),
       updatedAt: new Date().toISOString(),
     };
 
