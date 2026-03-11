@@ -41,27 +41,25 @@ A full-stack home energy management dashboard with AI-powered electricity bill o
 
 - Node.js 18+
 - pnpm (recommended) or npm
-- Supabase account (free tier works)
-- API keys for: Central Weather Administration, Tavily (for AI search)
+
+### 需申請的服務與 API Key
+
+| # | 服務 | 用途 | 申請連結 | 費用 |
+|---|------|------|----------|------|
+| 1 | **Supabase** | 資料庫 + Auth | https://supabase.com/dashboard | Free tier |
+| 2 | **Google OAuth** | 登入 | https://console.cloud.google.com/apis/credentials | 免費 |
+| 3 | **GitHub OAuth** | 登入 | https://github.com/settings/developers | 免費 |
+| 4 | **中央氣象署 Open API** | 天氣預報 | https://opendata.cwa.gov.tw | 免費（需註冊） |
+| 5 | **OpenAI API** | AI Chat | https://platform.openai.com/api-keys | 依用量計費 |
+| 6 | **Tavily API** | AI 網路搜尋 | https://tavily.com | 免費 1,000 次/月 |
+
+> 詳細申請步驟請參考 `.env.local.example` 內的註解說明。
 
 ### Environment Variables
 
 ```bash
-cp .env.example .env.local
-```
-
-```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-
-# AI
-OPENAI_API_KEY=your_openai_key          # or Anthropic key for AI SDK
-TAVILY_API_KEY=your_tavily_key
-
-# Weather
-CWA_API_KEY=your_cwa_api_key            # 中央氣象署 API Key
+cp .env.local.example .env.local
+# 編輯 .env.local 填入各服務的 API Key
 ```
 
 ### Installation
