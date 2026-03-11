@@ -11,12 +11,14 @@ interface DevicesState {
   items: Device[];
   loading: boolean;
   error: string | null;
+  fetched: boolean;
 }
 
 const initialState: DevicesState = {
   items: [],
   loading: false,
   error: null,
+  fetched: false,
 };
 
 /** DB row → Device 型別轉換 */
@@ -87,10 +89,12 @@ export const devicesSlice = createSlice({
       })
       .addCase(fetchDevices.fulfilled, (state, action) => {
         state.loading = false;
+        state.fetched = true;
         state.items = action.payload;
       })
       .addCase(fetchDevices.rejected, (state, action) => {
         state.loading = false;
+        state.fetched = true;
         state.error = action.error.message ?? "讀取設備失敗";
       })
       .addCase(addDevice.fulfilled, (state, action) => {

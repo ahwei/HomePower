@@ -10,13 +10,13 @@ import {
 
 export function useDevices() {
   const dispatch = useAppDispatch();
-  const { items, loading, error } = useAppSelector((s) => s.devices);
+  const { items, loading, error, fetched } = useAppSelector((s) => s.devices);
 
   useEffect(() => {
-    if (items.length === 0 && !loading) {
+    if (!fetched && !loading) {
       dispatch(fetchDevices());
     }
-  }, [dispatch, items.length, loading]);
+  }, [dispatch, fetched, loading]);
 
   return {
     devices: items,
