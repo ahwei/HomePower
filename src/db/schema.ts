@@ -107,3 +107,28 @@ export const userSettings = pgTable("user_settings", {
   location: text("location").notNull().default("高雄"),
   householdSize: integer("household_size").notNull().default(3),
 });
+
+// --- MCP Tokens ---
+
+export const mcpTokens = pgTable(
+  "mcp_tokens",
+  {
+    id: uuid("id")
+      .default(sql`gen_random_uuid()`)
+      .primaryKey(),
+    userId: uuid("user_id").notNull(),
+    name: text("name").notNull(),
+    tokenHash: text("token_hash").notNull(),
+    tokenPrefix: text("token_prefix").notNull(), // 前 8 字元，用於識別
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("mcp_tokens_user").on(table.userId),
+    index("mcp_tokens_hash").on(table.tokenHash),
+  ]
+);
