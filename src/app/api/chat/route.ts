@@ -1,11 +1,12 @@
+import { createClient } from "@/lib/supabase/server";
+import { openai } from "@ai-sdk/openai";
 import {
   convertToModelMessages,
-  streamText,
   stepCountIs,
+  streamText,
   type UIMessage,
 } from "ai";
-import { openai } from "@ai-sdk/openai";
-import { createClient } from "@/lib/supabase/server";
+import { DEFAULT_OPENAI_MODEL } from "@/constants/ai";
 import { createTools } from "./tools";
 
 export const maxDuration = 30;
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
     await req.json();
 
   const result = streamText({
-    model: openai("gpt-4o-mini"),
+    model: openai(process.env.OPENAI_MODEL ?? DEFAULT_OPENAI_MODEL),
     system: getSystemPrompt(),
     messages: await convertToModelMessages(messages),
     tools: createTools(user.id),
@@ -60,7 +61,7 @@ export async function POST(req: Request) {
           const userText =
             lastUserMsg.parts
               ?.filter(
-                (p): p is { type: "text"; text: string } => p.type === "text"
+                (p): p is { type: "text"; text: string } => p.type === "text",
               )
               .map((p) => p.text)
               .join("") ?? "";
