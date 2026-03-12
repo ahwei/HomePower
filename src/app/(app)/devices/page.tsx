@@ -1,7 +1,14 @@
+"use client";
+
+import { useState } from "react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
+import { DeviceList } from "@/components/devices/device-list";
+import { AddDeviceDialog } from "@/components/devices/add-device-dialog";
 
 export default function DevicesPage() {
+  const [dialogOpen, setDialogOpen] = useState(false);
+
   return (
     <>
       <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
@@ -10,10 +17,8 @@ export default function DevicesPage() {
         <h1 className="text-lg font-semibold">設備管理</h1>
       </header>
       <main className="flex-1 p-6">
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center text-muted-foreground">
-          <p className="font-medium">設備列表</p>
-          <p className="text-sm">DeviceList + AddDeviceDialog</p>
-        </div>
+        <DeviceList onAddClick={() => setDialogOpen(true)} />
+        <AddDeviceDialog open={dialogOpen} onOpenChange={setDialogOpen} />
       </main>
     </>
   );

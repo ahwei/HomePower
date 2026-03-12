@@ -8,6 +8,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 pnpm dev          # Dev server on port 8088
 pnpm build        # Production build (Turbopack)
 pnpm lint         # ESLint
+pnpm db:generate  # Generate Drizzle migration files
+pnpm db:push      # Push schema directly to DB (dev)
+pnpm db:studio    # Open Drizzle Studio (DB GUI)
 ```
 
 ## Tech Stack
@@ -15,7 +18,8 @@ pnpm lint         # ESLint
 - **Next.js 16** (App Router, React 19, Turbopack)
 - **TypeScript** strict mode
 - **Tailwind CSS v4** + **shadcn/ui** (base-nova style, lucide icons)
-- **Supabase** — PostgreSQL + Auth (email/password + WebAuthn passkey MFA)
+- **Supabase** — Auth (email/password + WebAuthn passkey MFA)
+- **Drizzle ORM** + **pg** — PostgreSQL database access (schema in `src/db/schema.ts`)
 - **react-hook-form** + **Zod v4** for form validation
 - **sonner** for toast notifications
 
@@ -46,10 +50,27 @@ Next.js 16 uses `src/proxy.ts` (not `middleware.ts`). It handles:
 - `src/lib/supabase/client.ts` — Browser client (`createBrowserClient` from `@supabase/ssr`)
 - `src/lib/supabase/server.ts` — Server client with cookie management (`createServerClient`)
 
+### Project Structure
+
+```
+src/
+├── app/               # Next.js App Router pages + API routes
+├── components/
+│   ├── ui/            # shadcn/ui base components
+│   ├── dashboard/     # Dashboard feature components
+│   └── billing/       # Billing feature components
+├── constants/         # App constants (device presets, electricity plans)
+├── db/                # Drizzle ORM schema + singleton instance
+├── hooks/             # Shared React hooks (use-store, use-grid-status, etc.)
+├── store/             # Redux Toolkit store, slices, provider
+└── lib/               # Utilities (cn, types, supabase clients)
+```
+
 ### Component Patterns
 
 - **Server Components** by default; add `"use client"` only when needed
 - **shadcn/ui** components in `src/components/ui/` — import from `@/components/ui/xxx`
+- Feature components in `src/components/{feature}/` — e.g. `@/components/dashboard/xxx`
 - App shell: `SidebarProvider` + `AppSidebar` + `SidebarInset` wrapping pages
 - Page header pattern: `SidebarTrigger` + `Separator` + title
 - Forms: always use react-hook-form + Zod schema + `zodResolver`
@@ -63,14 +84,19 @@ Next.js 16 uses `src/proxy.ts` (not `middleware.ts`). It handles:
 - `src/proxy.ts` — Auth middleware (Next.js 16 proxy pattern)
 - `src/app/(app)/layout.tsx` — Protected layout, fetches user server-side
 - `src/components/app-sidebar.tsx` — Navigation + user dropdown + passkey registration
+- `src/db/schema.ts` — Drizzle ORM schema (devices, usage_logs, user_settings)
+- `src/db/index.ts` — Drizzle DB singleton instance
+- `src/app/actions/devices.ts` — Server Actions for device CRUD
 - `src/lib/utils.ts` — `cn()` helper (clsx + tailwind-merge)
 - `components.json` — shadcn/ui configuration
+- `drizzle.config.ts` — Drizzle Kit configuration
 
 ## Environment Variables
 
 ```
 NEXT_PUBLIC_SUPABASE_URL      # Supabase project URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY # Supabase anon key
+DATABASE_URL                  # PostgreSQL connection string
 CWA_API_KEY                   # 中央氣象署 Open API
 OPENAI_API_KEY                # OpenAI API (chat + web search)
 ```
