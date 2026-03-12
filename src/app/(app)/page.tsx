@@ -1,9 +1,7 @@
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { GridStatusBanner } from "@/components/dashboard/grid-status-banner";
-import { EnergyOverviewCards } from "@/components/dashboard/energy-overview-cards";
-import { DeviceConsumptionChart } from "@/components/dashboard/device-consumption-chart";
-import { DailyUsageChart } from "@/components/dashboard/daily-usage-chart";
+import { DashboardContent } from "@/components/dashboard/dashboard-content";
 import { WeatherForecastStrip } from "@/components/dashboard/weather-forecast-strip";
 
 export default function DashboardPage() {
@@ -16,11 +14,7 @@ export default function DashboardPage() {
       </header>
       <main className="flex-1 space-y-6 p-6">
         <GridStatusBanner />
-        <EnergyOverviewCards />
-        <div className="grid gap-4 lg:grid-cols-2">
-          <DeviceConsumptionChart />
-          <DailyUsageChart />
-        </div>
+        <DashboardContent />
         <WeatherForecastStrip />
       </main>
     </>
