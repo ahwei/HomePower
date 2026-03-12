@@ -108,6 +108,14 @@ export function DailyUsageChart() {
               <Tooltip
                 formatter={(value) => [`${value} kWh`, "用電量"]}
                 labelFormatter={(label) => `時間：${label}`}
+                contentStyle={{
+                  backgroundColor: "var(--color-card)",
+                  borderColor: "var(--color-border)",
+                  borderRadius: "var(--radius-md)",
+                  color: "var(--color-foreground)",
+                }}
+                itemStyle={{ color: "var(--color-foreground)" }}
+                labelStyle={{ color: "var(--color-muted-foreground)" }}
               />
               {showPeakZones && (
                 <>
