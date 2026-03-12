@@ -1,11 +1,12 @@
+import { createClient } from "@/lib/supabase/server";
+import { openai } from "@ai-sdk/openai";
 import {
   convertToModelMessages,
-  streamText,
   stepCountIs,
+  streamText,
   type UIMessage,
 } from "ai";
-import { openai } from "@ai-sdk/openai";
-import { createClient } from "@/lib/supabase/server";
+import { DEFAULT_OPENAI_MODEL } from "@/constants/ai";
 import { createTools } from "./tools";
 
 export const maxDuration = 30;
@@ -41,14 +42,15 @@ export async function POST(req: Request) {
     await req.json();
 
   const result = streamText({
-    model: openai("gpt-4o-mini"),
+    model: openai(process.env.OPENAI_MODEL ?? DEFAULT_OPENAI_MODEL),
     system: getSystemPrompt(),
     messages: await convertToModelMessages(messages),
     tools: createTools(user.id),
     stopWhen: stepCountIs(5),
     async onFinish({ text }) {
-      // 有 sessionId 才存，由前端決定何時建立 session
-      if (sessionId && text) {
+      if (!sessionId) return;
+
+      try {
         const { db } = await import("@/db");
         const { chatMessages, chatSessions } = await import("@/db/schema");
         const { eq } = await import("drizzle-orm");
@@ -58,7 +60,9 @@ export async function POST(req: Request) {
         if (lastUserMsg) {
           const userText =
             lastUserMsg.parts
-              ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
+              ?.filter(
+                (p): p is { type: "text"; text: string } => p.type === "text",
+              )
               .map((p) => p.text)
               .join("") ?? "";
           if (userText) {
@@ -70,18 +74,22 @@ export async function POST(req: Request) {
           }
         }
 
-        // 存 assistant 回覆
-        await db.insert(chatMessages).values({
-          sessionId,
-          role: "assistant",
-          content: text,
-        });
+        // 存 assistant 回覆（即使 text 為空也存 tool 回應的結果）
+        if (text) {
+          await db.insert(chatMessages).values({
+            sessionId,
+            role: "assistant",
+            content: text,
+          });
+        }
 
         // 更新 session updatedAt
         await db
           .update(chatSessions)
           .set({ updatedAt: new Date() })
           .where(eq(chatSessions.id, sessionId));
+      } catch (error) {
+        console.error("Failed to save chat messages:", error);
       }
     },
   });

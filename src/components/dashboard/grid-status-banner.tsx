@@ -7,7 +7,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { useGridStatus } from "@/hooks/use-grid-status";
+import { useGetGridStatusQuery } from "@/store/api/grid-status-api";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { GridStatus, GridStatusLevel } from "@/lib/types";
 
@@ -130,7 +130,9 @@ function DetailPanel({ data }: { data: GridStatus }) {
 }
 
 export function GridStatusBanner() {
-  const { data, isLoading, error } = useGridStatus();
+  const { data, isLoading, error } = useGetGridStatusQuery(undefined, {
+    pollingInterval: 300_000, // 5 分鐘
+  });
   const [open, setOpen] = useState(false);
 
   if (isLoading) {
@@ -141,7 +143,7 @@ export function GridStatusBanner() {
     );
   }
 
-  if (error && !data) {
+  if (error) {
     return (
       <div
         data-testid="grid-status-banner"

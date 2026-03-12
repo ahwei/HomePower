@@ -12,6 +12,8 @@ import {
   ReferenceArea,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useGetDevicesQuery } from "@/store/api/devices-api";
 import { useAppSelector } from "@/hooks/use-store";
 
 interface HourlyData {
@@ -20,12 +22,8 @@ interface HourlyData {
   kwh: number;
 }
 
-/**
- * 目前使用靜態估算資料（依設備推估）。
- * 有 usage_logs 後可改為從 DB 查詢。
- */
 function useEstimatedHourlyData(): HourlyData[] {
-  const devices = useAppSelector((s) => s.devices.items);
+  const { data: devices = [] } = useGetDevicesQuery();
 
   return useMemo(() => {
     const hourly = Array.from({ length: 24 }, (_, h) => ({
@@ -37,7 +35,6 @@ function useEstimatedHourlyData(): HourlyData[] {
     const active = devices.filter((d) => d.isActive);
     for (const d of active) {
       const kwhPerHour = d.ratedPowerW / 1000;
-      // 平均分散到 dailyHours 小時（假設從早上 8 點開始）
       const startHour = 8;
       const hours = Math.min(Math.round(d.dailyHours), 24);
       for (let i = 0; i < hours; i++) {
@@ -46,7 +43,6 @@ function useEstimatedHourlyData(): HourlyData[] {
       }
     }
 
-    // 四捨五入
     for (const h of hourly) {
       h.kwh = Math.round(h.kwh * 100) / 100;
     }
@@ -56,10 +52,24 @@ function useEstimatedHourlyData(): HourlyData[] {
 }
 
 export function DailyUsageChart() {
+  const { isLoading } = useGetDevicesQuery();
   const data = useEstimatedHourlyData();
   const planType = useAppSelector((s) => s.settings.planType);
   const showPeakZones = planType !== "residential";
   const hasData = data.some((d) => d.kwh > 0);
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm font-medium">每日用電趨勢</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-48 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!hasData) {
     return (
@@ -101,7 +111,6 @@ export function DailyUsageChart() {
               />
               {showPeakZones && (
                 <>
-                  {/* 尖峰時段 07:30-22:30 → 簡化為 8-22 */}
                   <ReferenceArea
                     x1="8:00"
                     x2="22:00"

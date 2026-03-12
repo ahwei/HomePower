@@ -4,7 +4,11 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DeviceCard } from "./device-card";
-import { useDevices } from "@/hooks/use-devices";
+import {
+  useGetDevicesQuery,
+  useToggleDeviceMutation,
+  useDeleteDeviceMutation,
+} from "@/store/api/devices-api";
 import { computeMonthlyKwh } from "@/lib/types";
 
 interface DeviceListProps {
@@ -12,14 +16,16 @@ interface DeviceListProps {
 }
 
 export function DeviceList({ onAddClick }: DeviceListProps) {
-  const { devices, loading, error, toggle, remove } = useDevices();
+  const { data: devices = [], isLoading, error } = useGetDevicesQuery();
+  const [toggleDevice] = useToggleDeviceMutation();
+  const [deleteDevice] = useDeleteDeviceMutation();
 
   const activeCount = devices.filter((d) => d.isActive).length;
   const totalKwh = devices
     .filter((d) => d.isActive)
     .reduce((sum, d) => sum + computeMonthlyKwh(d), 0);
 
-  if (loading && devices.length === 0) {
+  if (isLoading && devices.length === 0) {
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 3 }, (_, i) => (
@@ -41,7 +47,11 @@ export function DeviceList({ onAddClick }: DeviceListProps) {
         </div>
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center text-muted-foreground">
           <p className="font-medium">載入失敗</p>
-          <p className="mt-1 text-sm">{error}</p>
+          <p className="mt-1 text-sm">
+            {error && typeof error === "object" && "error" in error
+              ? String((error as { error: string }).error)
+              : "未知錯誤"}
+          </p>
         </div>
       </div>
     );
@@ -49,7 +59,6 @@ export function DeviceList({ onAddClick }: DeviceListProps) {
 
   return (
     <div className="space-y-4">
-      {/* 統計列 + 新增按鈕 */}
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
           {devices.length > 0 ? (
@@ -66,7 +75,6 @@ export function DeviceList({ onAddClick }: DeviceListProps) {
         </Button>
       </div>
 
-      {/* 設備列表 */}
       {devices.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center text-muted-foreground">
           <p className="font-medium">尚未新增任何設備</p>
@@ -78,8 +86,8 @@ export function DeviceList({ onAddClick }: DeviceListProps) {
             <DeviceCard
               key={device.id}
               device={device}
-              onToggle={toggle}
-              onDelete={remove}
+              onToggle={(id, isActive) => toggleDevice({ id, isActive })}
+              onDelete={(id) => deleteDevice(id)}
             />
           ))}
         </div>

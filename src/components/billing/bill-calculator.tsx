@@ -10,12 +10,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useGetDevicesQuery } from "@/store/api/devices-api";
 import { useAppSelector } from "@/hooks/use-store";
 import { computeMonthlyKwh } from "@/lib/types";
 import { calculateBill } from "@/components/billing/calculate-bill";
 
 export function BillCalculator() {
-  const devices = useAppSelector((s) => s.devices.items);
+  const { data: devices = [] } = useGetDevicesQuery();
   const { planType, isSummer } = useAppSelector((s) => s.settings);
 
   const result = useMemo(() => {

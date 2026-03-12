@@ -9,7 +9,8 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAppSelector } from "@/hooks/use-store";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useGetDevicesQuery } from "@/store/api/devices-api";
 import { computeMonthlyKwh } from "@/lib/types";
 import type { DeviceCategory } from "@/lib/types";
 
@@ -33,7 +34,7 @@ interface ChartEntry {
 
 export const DeviceConsumptionChart = React.memo(
   function DeviceConsumptionChart() {
-    const devices = useAppSelector((s) => s.devices.items);
+    const { data: devices = [], isLoading } = useGetDevicesQuery();
 
     const { entries, totalKwh } = useMemo(() => {
       const active = devices.filter((d) => d.isActive);
@@ -50,6 +51,19 @@ export const DeviceConsumptionChart = React.memo(
 
       return { entries: items, totalKwh: Math.round(total) };
     }, [devices]);
+
+    if (isLoading) {
+      return (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">設備用電佔比</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-48 w-full" />
+          </CardContent>
+        </Card>
+      );
+    }
 
     if (entries.length === 0) {
       return (
