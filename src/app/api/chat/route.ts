@@ -10,7 +10,11 @@ import { createTools } from "./tools";
 
 export const maxDuration = 30;
 
-const SYSTEM_PROMPT = `你是 HomePower 智慧家庭用電助理。你可以幫使用者查詢家電設備、分析用電數據、計算電費、提供節電建議。
+function getSystemPrompt() {
+  const today = new Date().toISOString().slice(0, 10);
+  return `你是 HomePower 智慧家庭用電助理。你可以幫使用者查詢家電設備、分析用電數據、計算電費、提供節電建議。
+
+今天日期：${today}
 
 回答規則：
 - 使用繁體中文回答
@@ -19,7 +23,9 @@ const SYSTEM_PROMPT = `你是 HomePower 智慧家庭用電助理。你可以幫�
 - 提到金額時使用 TWD 或「元」為單位
 - 提到用電量時使用 kWh 為單位
 - 如果使用者問的問題跟家庭用電無關，禮貌地引導回用電相關話題
-- 當比較月份用電時，主動說明夏月（6-9月）和非夏月的差異`;
+- 當比較月份用電時，主動說明夏月（6-9月）和非夏月的差異
+- 使用者說「上個月」「這個月」等相對時間時，根據今天日期推算正確的年月`;
+}
 
 export async function POST(req: Request) {
   const supabase = await createClient();
@@ -35,7 +41,7 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model: openai("gpt-4o-mini"),
-    system: SYSTEM_PROMPT,
+    system: getSystemPrompt(),
     messages: await convertToModelMessages(messages),
     tools: createTools(user.id),
     stopWhen: stepCountIs(5),
