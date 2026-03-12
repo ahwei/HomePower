@@ -47,8 +47,9 @@ export async function POST(req: Request) {
     tools: createTools(user.id),
     stopWhen: stepCountIs(5),
     async onFinish({ text }) {
-      // 有 sessionId 才存，由前端決定何時建立 session
-      if (sessionId && text) {
+      if (!sessionId) return;
+
+      try {
         const { db } = await import("@/db");
         const { chatMessages, chatSessions } = await import("@/db/schema");
         const { eq } = await import("drizzle-orm");
@@ -58,7 +59,9 @@ export async function POST(req: Request) {
         if (lastUserMsg) {
           const userText =
             lastUserMsg.parts
-              ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
+              ?.filter(
+                (p): p is { type: "text"; text: string } => p.type === "text"
+              )
               .map((p) => p.text)
               .join("") ?? "";
           if (userText) {
@@ -70,18 +73,22 @@ export async function POST(req: Request) {
           }
         }
 
-        // 存 assistant 回覆
-        await db.insert(chatMessages).values({
-          sessionId,
-          role: "assistant",
-          content: text,
-        });
+        // 存 assistant 回覆（即使 text 為空也存 tool 回應的結果）
+        if (text) {
+          await db.insert(chatMessages).values({
+            sessionId,
+            role: "assistant",
+            content: text,
+          });
+        }
 
         // 更新 session updatedAt
         await db
           .update(chatSessions)
           .set({ updatedAt: new Date() })
           .where(eq(chatSessions.id, sessionId));
+      } catch (error) {
+        console.error("Failed to save chat messages:", error);
       }
     },
   });
