@@ -1,11 +1,14 @@
 "use client";
 
-import { useGetDevicesQuery } from "@/store/api/devices-api";
+import { useEffect, useRef } from "react";
+import { useGetDevicesQuery, devicesApi } from "@/store/api/devices-api";
+import { useAppDispatch } from "@/hooks/use-store";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { EnergyOverviewCards } from "./energy-overview-cards";
 import { DeviceConsumptionChart } from "./device-consumption-chart";
 import { DailyUsageChart } from "./daily-usage-chart";
+import type { Device } from "@/lib/types";
 
 function DashboardSkeleton() {
   return (
@@ -39,14 +42,32 @@ function DashboardSkeleton() {
   );
 }
 
-export function DashboardContent() {
+interface DashboardContentProps {
+  initialDevices: Device[];
+}
+
+export function DashboardContent({ initialDevices }: DashboardContentProps) {
+  const dispatch = useAppDispatch();
+  const hydrated = useRef(false);
+
+  // 將 Server Component 拿到的資料注入 RTK Query cache
+  useEffect(() => {
+    if (!hydrated.current && initialDevices.length > 0) {
+      dispatch(
+        devicesApi.util.upsertQueryData("getDevices", undefined, initialDevices)
+      );
+      hydrated.current = true;
+    }
+  }, [dispatch, initialDevices]);
+
   const { isLoading, isError } = useGetDevicesQuery();
 
-  if (isLoading) {
+  // 有 SSR 初始資料時不需要顯示 skeleton
+  if (isLoading && initialDevices.length === 0) {
     return <DashboardSkeleton />;
   }
 
-  if (isError) {
+  if (isError && initialDevices.length === 0) {
     return (
       <>
         <div className="rounded-lg border border-dashed p-4 text-center text-muted-foreground">
