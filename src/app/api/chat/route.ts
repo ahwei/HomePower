@@ -37,7 +37,8 @@ export async function POST(req: Request) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const { messages }: { messages: UIMessage[] } = await req.json();
+  const { messages, sessionId }: { messages: UIMessage[]; sessionId?: string } =
+    await req.json();
 
   const result = streamText({
     model: openai("gpt-4o-mini"),
@@ -45,6 +46,44 @@ export async function POST(req: Request) {
     messages: await convertToModelMessages(messages),
     tools: createTools(user.id),
     stopWhen: stepCountIs(5),
+    async onFinish({ text }) {
+      // 有 sessionId 才存，由前端決定何時建立 session
+      if (sessionId && text) {
+        const { db } = await import("@/db");
+        const { chatMessages, chatSessions } = await import("@/db/schema");
+        const { eq } = await import("drizzle-orm");
+
+        // 存 user 最後一則訊息
+        const lastUserMsg = messages.filter((m) => m.role === "user").pop();
+        if (lastUserMsg) {
+          const userText =
+            lastUserMsg.parts
+              ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
+              .map((p) => p.text)
+              .join("") ?? "";
+          if (userText) {
+            await db.insert(chatMessages).values({
+              sessionId,
+              role: "user",
+              content: userText,
+            });
+          }
+        }
+
+        // 存 assistant 回覆
+        await db.insert(chatMessages).values({
+          sessionId,
+          role: "assistant",
+          content: text,
+        });
+
+        // 更新 session updatedAt
+        await db
+          .update(chatSessions)
+          .set({ updatedAt: new Date() })
+          .where(eq(chatSessions.id, sessionId));
+      }
+    },
   });
 
   return result.toUIMessageStreamResponse();

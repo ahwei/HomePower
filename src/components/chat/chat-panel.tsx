@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { Bot } from "lucide-react";
 import {
@@ -20,6 +20,10 @@ import {
   PromptInputSubmit,
 } from "@/components/ai-elements/prompt-input";
 import { ChatMessage } from "./chat-message";
+import {
+  createChatSession,
+  updateSessionTitle,
+} from "@/app/actions/chat";
 
 const SUGGESTIONS = [
   "我有幾台設備？每月總共用多少電？",
@@ -30,15 +34,63 @@ const SUGGESTIONS = [
   "這個月的每日用電趨勢如何？",
 ];
 
-export function ChatPanel() {
+interface ChatPanelProps {
+  sessionId?: string;
+  initialMessages?: Array<{ role: "user" | "assistant"; content: string }>;
+}
+
+export function ChatPanel({ sessionId: initialSessionId, initialMessages }: ChatPanelProps) {
   const [input, setInput] = useState("");
-  const { messages, sendMessage, status, stop } = useChat();
+  const sessionIdRef = useRef<string | undefined>(initialSessionId);
+  const titleSetRef = useRef(!!initialSessionId);
 
-  const isLoading = status === "streaming" || status === "submitted";
+  const { messages, sendMessage, status, stop } = useChat({
+    ...(initialMessages
+      ? {
+          messages: initialMessages.map((m, i) => ({
+            id: `init-${i}`,
+            role: m.role as "user" | "assistant",
+            parts: [{ type: "text" as const, text: m.content }],
+          })),
+        }
+      : {}),
+  });
 
-  const handleSend = (question: string) => {
-    sendMessage({ text: question });
-  };
+  // Create session on first user message
+  const ensureSession = useCallback(async () => {
+    if (!sessionIdRef.current) {
+      const session = await createChatSession();
+      sessionIdRef.current = session.id;
+    }
+    return sessionIdRef.current;
+  }, []);
+
+  // Auto-set title from first user message
+  useEffect(() => {
+    if (titleSetRef.current) return;
+    const firstUser = messages.find((m) => m.role === "user");
+    if (firstUser && sessionIdRef.current) {
+      const text = firstUser.parts
+        ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
+        .map((p) => p.text)
+        .join("");
+      if (text) {
+        titleSetRef.current = true;
+        updateSessionTitle(sessionIdRef.current, text);
+      }
+    }
+  }, [messages]);
+
+  const handleSend = useCallback(
+    async (question: string) => {
+      const sid = await ensureSession();
+      sendMessage(
+        { text: question },
+        { body: { sessionId: sid } }
+      );
+    },
+    [ensureSession, sendMessage]
+  );
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
@@ -82,9 +134,9 @@ export function ChatPanel() {
       <div className="border-t bg-background p-4">
         <div className="mx-auto max-w-2xl">
           <PromptInput
-            onSubmit={({ text }) => {
+            onSubmit={async ({ text }) => {
               if (text.trim()) {
-                sendMessage({ text });
+                await handleSend(text);
                 setInput("");
               }
             }}
@@ -96,10 +148,7 @@ export function ChatPanel() {
             />
             <PromptInputFooter>
               <div />
-              <PromptInputSubmit
-                status={status}
-                onStop={stop}
-              />
+              <PromptInputSubmit status={status} onStop={stop} />
             </PromptInputFooter>
           </PromptInput>
         </div>

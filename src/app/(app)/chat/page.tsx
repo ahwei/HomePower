@@ -1,8 +1,8 @@
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { ChatPanel } from "@/components/chat/chat-panel";
+import { ChatHistory } from "@/components/chat/chat-history";
 
-export default function ChatPage() {
+export default function ChatListPage() {
   return (
     <>
       <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
@@ -10,7 +10,9 @@ export default function ChatPage() {
         <Separator orientation="vertical" className="mr-2 h-4" />
         <h1 className="text-lg font-semibold">AI 諮詢</h1>
       </header>
-      <ChatPanel />
+      <main className="flex-1 p-6">
+        <ChatHistory />
+      </main>
     </>
   );
 }
