@@ -487,11 +487,57 @@ interface WeatherForecast {
 
 ---
 
-## 11. Future Enhancements (未來擴展)
+## 11. Future Enhancements（未來擴展路線圖）
 
-- **MCP Server**：將設備資料和電費計算暴露為 MCP tool，讓 Claude Desktop 直接查詢
-- **React Native App**：用相同的 Supabase backend 做行動版
-- **真實 IoT 整合**：支援 Tuya / Home Assistant API 讀取實際設備功耗
-- **LINE Bot**：整合 LINE Messaging API，讓使用者透過 LINE 問電費問題
-- **多戶型比較**：公寓 vs 透天 vs 套房的用電模式和最佳方案推薦
-- **台美電價比較**：串接 EIA API 做跨國電價分析
+> 接續 Phase 5（AI Chat Agent，已完成），以下為 Phase 6–9 規劃。
+
+### Phase 6：Smart Energy Intelligence
+
+| #   | Feature                                                                                       | AI                                                        | Open Data                                                       | Supabase              | New                        |
+| --- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------------- | --------------------- | -------------------------- |
+| 6-1 | **Energy Knowledge RAG** — pgvector 語意搜尋節能文件/家電規格/電價法規                        | `searchEnergyKnowledge` tool + `text-embedding-3-small`   | 能源局節能文件、能源效率標示 `ranking.energylabel.org.tw`        | pgvector 擴充         | `energy_knowledge` table   |
+| 6-2 | **台美電價比較** — EIA API 抓美國各州住宅電價，Dashboard 卡片 + AI 比較工具                    | `compareInternationalRates` tool                          | US EIA API v2 `api.eia.gov`、EPA eGRID 碳排係數                 | —                     | `/api/energy/us-rates` route |
+| 6-3 | **Row-Level Security** — 所有 table 加 RLS policy `auth.uid() = user_id`                      | —                                                         | —                                                               | RLS policies × 5 tables | migration                |
+| 6-4 | **用電異常偵測** — AI 分析 7 天用電 vs 30 天均值 × 天氣，Dashboard alert                      | `detectUsageAnomalies` tool                               | 既有天氣 + usage_logs                                           | Edge Function (optional cron) | `anomaly_alerts` table |
+
+### Phase 7：Real-Time Dashboard & Advanced Analytics
+
+| #   | Feature                                                                                       | AI                                                        | Open Data                                                       | Supabase                         | New                              |
+| --- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------------- | -------------------------------- | -------------------------------- |
+| 7-1 | **Realtime 設備狀態** — 裝置 toggle/usage 即時同步所有 client                                 | —                                                         | —                                                               | Realtime (Postgres Changes)      | `useRealtimeDevices` hook        |
+| 7-2 | **碳排放強度追蹤** — 台電即時發電結構 → 加權碳排強度 gCO₂/kWh                                 | `getOptimalUsageTime` tool（最便宜+最綠時段）             | 台電發電結構 `genary.json`、EPA eGRID                           | Storage（歷史快照）              | `/api/carbon-intensity` route    |
+| 7-3 | **AI 月報 PDF** — AI 撰寫摘要 + 圖表 → PDF 存 Supabase Storage                               | `generateMonthlyReport` tool                              | 全部內部資料                                                    | Storage (bucket `energy-reports`) + signed URLs | `reports` table、`/reports` page |
+| 7-4 | **預測用電量** — 歷史用電 + 天氣預報 → 預測 7 天 kWh + 預估帳單                               | `forecastUsage` tool (structured output)                  | CWA 天氣（既有）                                                | —                                | `UsageForecastChart` component   |
+
+### Phase 8：Platform Intelligence & Cross-Region
+
+| #   | Feature                                                                                       | AI                                                        | Open Data                                                       | Supabase                                | New                              |
+| --- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------------- | --------------------------------------- | -------------------------------- |
+| 8-1 | **Edge Functions** — 排程異常偵測、報表生成、資料匯入 → Deno Edge Functions                    | —                                                         | —                                                               | Edge Functions + pg_cron + DB Webhooks  | 3 Edge Functions                 |
+| 8-2 | **美國各州能源 Dashboard** — 50 州電價/碳排/再生能源比較頁 `/compare`                          | `analyzeRegionalComparison` tool                          | EIA 州電力、NOAA 氣候 `ncdc.noaa.gov`                           | Storage（快取）                         | `/compare` page                  |
+| 8-3 | **Multi-Turn Agent + Web Search** — OpenAI web search + 對話記憶 (pgvector)                    | `searchChatHistory` tool + web search                     | OpenAI web search                                               | pgvector (chat embeddings)              | `chat_messages.embedding` column |
+| 8-4 | **Push Notifications** — 限電警報、帳單超標、異常通知 → Service Worker                         | —                                                         | —                                                               | Realtime + DB Webhooks                  | `notification_preferences` table |
+
+### Phase 9：MCP Server
+
+| #   | Feature                                                                                                                                                        | Description                                                                                          | Exposed Tools / Resources                                                                                                         |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| 9-1 | **HomePower MCP Server** — 將設備資料、電費計算、用電分析暴露為 MCP tools，讓 Claude Desktop / Claude Code / 任何 MCP client 直接查詢                          | TypeScript MCP server（`@modelcontextprotocol/sdk`），透過 stdio transport 連接，以 Supabase service role 存取資料 | `getDevices`、`getDeviceSummary`、`calculateBill`、`getUsageByDateRange`、`getMonthlyUsageSummary`、`getEnergySavingTips`、`searchEnergyKnowledge` |
+| 9-2 | **MCP Resources** — 暴露 Dashboard 狀態為 MCP resources（唯讀）                                                                                               | 台電供電狀態、天氣預報、碳排強度作為 MCP resources，client 可訂閱即時更新                             | `grid-status://current`、`weather://forecast`、`carbon://intensity`                                                               |
+| 9-3 | **MCP Prompts** — 預設分析 prompt templates                                                                                                                    | 月度分析報告、節電建議、台美比較等 prompt templates 讓 MCP client 一鍵觸發                           | `analyze-monthly`、`saving-tips`、`compare-regions`                                                                               |
+
+### 新增環境變數
+
+| Variable                   | Phase | Source                |
+| -------------------------- | ----- | --------------------- |
+| `EIA_API_KEY`              | 6-2   | US EIA（free）        |
+| `SUPABASE_SERVICE_ROLE_KEY`| 6-3   | Supabase Dashboard    |
+| `NOAA_API_TOKEN`           | 8-2   | NOAA CDO（free）      |
+
+### AI Tools 路線：7 → 15
+
+現有 7 tools + 8 新增：`searchEnergyKnowledge`、`compareInternationalRates`、`detectUsageAnomalies`、`getOptimalUsageTime`、`generateMonthlyReport`、`forecastUsage`、`analyzeRegionalComparison`、`searchChatHistory`
+
+### MCP 暴露：7 tools + 3 resources + 3 prompts
+
+Phase 9 將既有 AI tools 重新封裝為 MCP protocol，讓任何 MCP client（Claude Desktop、Claude Code、Cursor 等）直接存取 HomePower 資料
