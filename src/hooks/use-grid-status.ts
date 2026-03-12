@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { GridStatus } from "@/lib/types";
 
 const POLL_INTERVAL = 300_000; // 5 分鐘
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 2000;
 
 export function useGridStatus() {
   const [data, setData] = useState<GridStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const retryCount = useRef(0);
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -20,8 +23,16 @@ export function useGridStatus() {
       const json: GridStatus = await res.json();
       setData(json);
       setError(null);
+      retryCount.current = 0;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "未知錯誤");
+      const msg = err instanceof Error ? err.message : "未知錯誤";
+      setError(msg);
+
+      // 自動重試
+      if (retryCount.current < MAX_RETRIES) {
+        retryCount.current += 1;
+        setTimeout(fetchStatus, RETRY_DELAY * retryCount.current);
+      }
     } finally {
       setIsLoading(false);
     }

@@ -94,7 +94,6 @@ export const devicesSlice = createSlice({
       })
       .addCase(fetchDevices.rejected, (state, action) => {
         state.loading = false;
-        state.fetched = true;
         state.error = action.error.message ?? "讀取設備失敗";
       })
       .addCase(addDevice.fulfilled, (state, action) => {
