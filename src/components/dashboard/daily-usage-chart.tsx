@@ -12,6 +12,7 @@ import {
   ReferenceArea,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useGetDevicesQuery } from "@/store/api/devices-api";
 import { useAppSelector } from "@/hooks/use-store";
 
@@ -51,10 +52,24 @@ function useEstimatedHourlyData(): HourlyData[] {
 }
 
 export function DailyUsageChart() {
+  const { isLoading } = useGetDevicesQuery();
   const data = useEstimatedHourlyData();
   const planType = useAppSelector((s) => s.settings.planType);
   const showPeakZones = planType !== "residential";
   const hasData = data.some((d) => d.kwh > 0);
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm font-medium">每日用電趨勢</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-48 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!hasData) {
     return (
