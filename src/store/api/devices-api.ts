@@ -1,4 +1,4 @@
-import { createApi, fakeBaseQuery, retry } from "@reduxjs/toolkit/query/react";
+import { createApi, fakeBaseQuery } from "@reduxjs/toolkit/query/react";
 import {
   getDevices,
   createDevice,
@@ -6,6 +6,22 @@ import {
   deleteDevice as deleteDeviceAction,
 } from "@/app/actions/devices";
 import type { Device } from "@/lib/types";
+
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1500;
+
+/** 帶重試的 async 呼叫 */
+async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (attempt === MAX_RETRIES - 1) throw error;
+      await new Promise((r) => setTimeout(r, RETRY_DELAY * (attempt + 1)));
+    }
+  }
+  throw new Error("Unreachable");
+}
 
 /** DB row → Device 型別轉換 */
 function mapRow(row: Awaited<ReturnType<typeof getDevices>>[number]): Device {
@@ -29,17 +45,15 @@ function mapRow(row: Awaited<ReturnType<typeof getDevices>>[number]): Device {
   };
 }
 
-const baseQueryWithRetry = retry(fakeBaseQuery(), { maxRetries: 3 });
-
 export const devicesApi = createApi({
   reducerPath: "devicesApi",
-  baseQuery: baseQueryWithRetry,
+  baseQuery: fakeBaseQuery(),
   tagTypes: ["Devices"],
   endpoints: (builder) => ({
     getDevices: builder.query<Device[], void>({
       queryFn: async () => {
         try {
-          const rows = await getDevices();
+          const rows = await withRetry(() => getDevices());
           return { data: rows.map(mapRow) };
         } catch (error) {
           return {
