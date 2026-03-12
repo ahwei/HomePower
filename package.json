@@ -9,13 +9,16 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.41",
     "@ai-sdk/react": "^3.0.118",
     "@base-ui/react": "^1.2.0",
     "@hookform/resolvers": "^5.2.2",
+    "@modelcontextprotocol/sdk": "^1.27.1",
     "@radix-ui/react-use-controllable-state": "^1.2.2",
     "@reduxjs/toolkit": "^2.11.2",
     "@rive-app/react-webgl2": "^4.27.1",
@@ -67,6 +70,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.0.18"
   }
 }
