@@ -22,8 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { useAppDispatch } from "@/hooks/use-store";
-import { addDevice } from "@/store/slices/devices-slice";
+import { useAddDeviceMutation } from "@/store/api/devices-api";
 import { DEVICE_PRESETS } from "@/constants/device-presets";
 import { toast } from "sonner";
 
@@ -43,7 +42,7 @@ interface AddDeviceDialogProps {
 }
 
 export function AddDeviceDialog({ open, onOpenChange }: AddDeviceDialogProps) {
-  const dispatch = useAppDispatch();
+  const [addDevice] = useAddDeviceMutation();
   const {
     register,
     handleSubmit,
@@ -78,14 +77,12 @@ export function AddDeviceDialog({ open, onOpenChange }: AddDeviceDialogProps) {
 
   async function onSubmit(data: FormValues) {
     try {
-      await dispatch(
-        addDevice({
-          name: data.name,
-          category: data.category,
-          ratedPowerW: data.ratedPowerW,
-          dailyHours: data.dailyHours,
-        })
-      ).unwrap();
+      await addDevice({
+        name: data.name,
+        category: data.category,
+        ratedPowerW: data.ratedPowerW,
+        dailyHours: data.dailyHours,
+      }).unwrap();
       toast.success(`已新增 ${data.name}`);
       onOpenChange(false);
     } catch {

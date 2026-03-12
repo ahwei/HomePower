@@ -11,6 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { useGetDevicesQuery } from "@/store/api/devices-api";
 import { useAppSelector } from "@/hooks/use-store";
 import { computeMonthlyKwh } from "@/lib/types";
 import type { PlanType, BillResult } from "@/lib/types";
@@ -24,7 +25,7 @@ interface PlanComparison {
 }
 
 export function PlanComparisonTable() {
-  const devices = useAppSelector((s) => s.devices.items);
+  const { data: devices = [] } = useGetDevicesQuery();
   const { isSummer } = useAppSelector((s) => s.settings);
 
   const comparisons = useMemo(() => {

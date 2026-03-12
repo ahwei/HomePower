@@ -3,7 +3,8 @@
 import { Sun, Cloud, CloudRain, CloudSnow, CloudDrizzle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useWeather } from "@/hooks/use-weather";
+import { useGetWeatherQuery } from "@/store/api/weather-api";
+import { useAppSelector } from "@/hooks/use-store";
 import type { WeatherForecast } from "@/lib/types";
 
 const DAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];
@@ -45,7 +46,10 @@ function ForecastCard({ forecast }: { forecast: WeatherForecast }) {
 }
 
 export function WeatherForecastStrip() {
-  const { data, isLoading, error } = useWeather();
+  const location = useAppSelector((s) => s.settings.location);
+  const { data = [], isLoading, isError } = useGetWeatherQuery(location, {
+    pollingInterval: 3_600_000, // 1 小時
+  });
 
   if (isLoading) {
     return (
@@ -57,7 +61,7 @@ export function WeatherForecastStrip() {
     );
   }
 
-  if (error && data.length === 0) {
+  if (isError && data.length === 0) {
     return (
       <div className="rounded-lg border border-dashed p-4 text-center text-muted-foreground">
         天氣資料暫時無法載入

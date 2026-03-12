@@ -1,6 +1,6 @@
 "use client";
 
-import { useDevices } from "@/hooks/use-devices";
+import { useGetDevicesQuery } from "@/store/api/devices-api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { EnergyOverviewCards } from "./energy-overview-cards";
@@ -10,7 +10,6 @@ import { DailyUsageChart } from "./daily-usage-chart";
 function DashboardSkeleton() {
   return (
     <>
-      {/* EnergyOverviewCards skeleton */}
       <div className="grid gap-4 md:grid-cols-3">
         {Array.from({ length: 3 }).map((_, i) => (
           <Card key={i}>
@@ -24,7 +23,6 @@ function DashboardSkeleton() {
           </Card>
         ))}
       </div>
-      {/* Charts skeleton */}
       <div className="grid gap-4 lg:grid-cols-2">
         {Array.from({ length: 2 }).map((_, i) => (
           <Card key={i}>
@@ -42,13 +40,13 @@ function DashboardSkeleton() {
 }
 
 export function DashboardContent() {
-  const { loading, error } = useDevices();
+  const { isLoading, isError } = useGetDevicesQuery();
 
-  if (loading) {
+  if (isLoading) {
     return <DashboardSkeleton />;
   }
 
-  if (error) {
+  if (isError) {
     return (
       <>
         <div className="rounded-lg border border-dashed p-4 text-center text-muted-foreground">

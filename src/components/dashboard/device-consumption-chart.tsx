@@ -9,7 +9,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAppSelector } from "@/hooks/use-store";
+import { useGetDevicesQuery } from "@/store/api/devices-api";
 import { computeMonthlyKwh } from "@/lib/types";
 import type { DeviceCategory } from "@/lib/types";
 
@@ -33,7 +33,7 @@ interface ChartEntry {
 
 export const DeviceConsumptionChart = React.memo(
   function DeviceConsumptionChart() {
-    const devices = useAppSelector((s) => s.devices.items);
+    const { data: devices = [] } = useGetDevicesQuery();
 
     const { entries, totalKwh } = useMemo(() => {
       const active = devices.filter((d) => d.isActive);
