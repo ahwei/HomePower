@@ -6,6 +6,7 @@ import { z } from "zod/v4";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Copy, Eye, EyeOff, Check } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -77,12 +78,19 @@ export function CreateTokenDialog({
     toast.success("已複製到剪貼簿");
   };
 
-  const mcpConfig = rawToken
+  const [configTab, setConfigTab] = useState("claude-code");
+
+  const mcpUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/api/mcp`
+      : "/api/mcp";
+
+  const claudeCodeConfig = rawToken
     ? JSON.stringify(
         {
           mcpServers: {
             homepower: {
-              url: `${typeof window !== "undefined" ? window.location.origin : ""}/api/mcp`,
+              url: mcpUrl,
               headers: {
                 Authorization: `Bearer ${rawToken}`,
               },
@@ -94,8 +102,31 @@ export function CreateTokenDialog({
       )
     : "";
 
+  const claudeDesktopConfig = rawToken
+    ? JSON.stringify(
+        {
+          mcpServers: {
+            homepower: {
+              command: "npx",
+              args: [
+                "mcp-remote",
+                mcpUrl,
+                "--header",
+                `Authorization: Bearer ${rawToken}`,
+              ],
+            },
+          },
+        },
+        null,
+        2
+      )
+    : "";
+
+  const currentConfig =
+    configTab === "claude-code" ? claudeCodeConfig : claudeDesktopConfig;
+
   const handleCopyConfig = async () => {
-    await navigator.clipboard.writeText(mcpConfig);
+    await navigator.clipboard.writeText(currentConfig);
     toast.success("設定已複製到剪貼簿");
   };
 
@@ -149,12 +180,20 @@ export function CreateTokenDialog({
               </div>
             </div>
 
-            {/* MCP Config */}
-            <div className="space-y-2">
+            {/* MCP Config with Tabs */}
+            <Tabs
+              value={configTab}
+              onValueChange={(v) => setConfigTab(v ?? configTab)}
+            >
               <div className="flex items-center justify-between">
-                <Label className="text-xs text-muted-foreground">
-                  MCP 設定
-                </Label>
+                <TabsList className="h-8">
+                  <TabsTrigger value="claude-code" className="text-xs px-3">
+                    Claude Code
+                  </TabsTrigger>
+                  <TabsTrigger value="claude-desktop" className="text-xs px-3">
+                    Claude Desktop
+                  </TabsTrigger>
+                </TabsList>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -165,36 +204,32 @@ export function CreateTokenDialog({
                   複製設定
                 </Button>
               </div>
-              <pre className="rounded-md bg-muted p-3 text-xs font-mono overflow-x-auto max-h-48">
-                {mcpConfig}
-              </pre>
-            </div>
-
-            {/* Steps */}
-            <div className="space-y-2 rounded-md border p-3 text-sm">
-              <p className="font-medium">使用方式</p>
-              <ol className="list-inside list-decimal space-y-1 text-muted-foreground text-xs">
-                <li>
-                  <strong>Claude Desktop</strong>：將上方設定貼到{" "}
+              <TabsContent value="claude-code" className="mt-2 space-y-2">
+                <pre className="rounded-md bg-muted p-3 text-xs font-mono overflow-x-auto max-h-48">
+                  {claudeCodeConfig}
+                </pre>
+                <p className="text-xs text-muted-foreground">
+                  貼到專案根目錄的{" "}
+                  <code className="rounded bg-muted px-1">.mcp.json</code>
+                </p>
+              </TabsContent>
+              <TabsContent value="claude-desktop" className="mt-2 space-y-2">
+                <pre className="rounded-md bg-muted p-3 text-xs font-mono overflow-x-auto max-h-48">
+                  {claudeDesktopConfig}
+                </pre>
+                <p className="text-xs text-muted-foreground">
+                  貼到{" "}
                   <code className="rounded bg-muted px-1">
                     claude_desktop_config.json
                   </code>
-                </li>
-                <li>
-                  <strong>Claude Code</strong>：將設定加到{" "}
-                  <code className="rounded bg-muted px-1">.mcp.json</code>
-                </li>
-                <li>
-                  <strong>MCP Inspector</strong>：使用 URL{" "}
+                  （需先安裝{" "}
                   <code className="rounded bg-muted px-1">
-                    {typeof window !== "undefined"
-                      ? window.location.origin
-                      : ""}/api/mcp
-                  </code>{" "}
-                  搭配 Bearer token
-                </li>
-              </ol>
-            </div>
+                    npx mcp-remote
+                  </code>
+                  ）
+                </p>
+              </TabsContent>
+            </Tabs>
 
             <DialogFooter>
               <Button onClick={() => handleClose(false)}>
