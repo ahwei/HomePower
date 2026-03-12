@@ -226,7 +226,9 @@ export function CreateTokenDialog({
                   <code className="rounded bg-muted px-1">
                     npx mcp-remote
                   </code>
-                  ）
+                  ）。若使用 nvm，請將{" "}
+                  <code className="rounded bg-muted px-1">command</code>{" "}
+                  改為 Node 20+ 的 npx 絕對路徑
                 </p>
               </TabsContent>
             </Tabs>

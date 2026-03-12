@@ -10,9 +10,9 @@ vi.mock("@/lib/mcp-auth", () => ({
 vi.mock("@modelcontextprotocol/sdk/server/mcp.js", () => {
   return {
     McpServer: class MockMcpServer {
-      tool = vi.fn();
-      resource = vi.fn();
-      prompt = vi.fn();
+      registerTool = vi.fn();
+      registerResource = vi.fn();
+      registerPrompt = vi.fn();
       connect = vi.fn();
     },
   };
@@ -103,22 +103,9 @@ describe("MCP Route Handlers", () => {
   });
 
   describe("GET", () => {
-    it("returns 401 without auth", async () => {
-      const request = new Request("http://localhost/api/mcp");
-
-      const response = await GET(request);
-      expect(response.status).toBe(401);
-    });
-
-    it("delegates to MCP transport for valid token", async () => {
-      mockValidate.mockResolvedValue("user-456");
-
-      const request = new Request("http://localhost/api/mcp", {
-        headers: { Authorization: "Bearer hp_test123" },
-      });
-
-      const response = await GET(request);
-      expect(response.status).toBe(200);
+    it("returns 405 (stateless mode, no SSE)", async () => {
+      const response = await GET();
+      expect(response.status).toBe(405);
     });
   });
 

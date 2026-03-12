@@ -124,6 +124,95 @@ Pre-configured appliance templates with typical power ratings:
 | 除濕機 | 350 | 6 |
 | EV 充電 (Level 2) | 7,200 | 4 (every 3 days) |
 
+## System Architecture
+
+```
+┌─────────────────────────────────────────────────────┐
+│                    Clients                          │
+│  Browser (Next.js App)  │  Claude Desktop / Code    │
+│         ↕ HTTP          │       ↕ mcp-remote        │
+└────────────┬────────────┴────────────┬──────────────┘
+             │                         │
+┌────────────▼─────────────────────────▼──────────────┐
+│              Next.js 16 Server                      │
+│                                                     │
+│  src/proxy.ts (Auth Middleware)                      │
+│  ├── Session refresh (Supabase SSR)                 │
+│  ├── Redirect unauthenticated → /login              │
+│  └── Bypass: /api/mcp, /.well-known, /auth/*        │
+│                                                     │
+│  ┌─────────────────┐  ┌──────────────────────────┐  │
+│  │  App Routes      │  │  API Routes              │  │
+│  │  /(app)/*        │  │  /api/chat    (AI Chat)  │  │
+│  │  /login          │  │  /api/mcp     (MCP SSE)  │  │
+│  │  /settings/*     │  │  /api/grid-status        │  │
+│  │                  │  │  /api/weather             │  │
+│  └─────────────────┘  └──────────────────────────┘  │
+│                                                     │
+│  ┌─────────────────┐  ┌──────────────────────────┐  │
+│  │  Server Actions  │  │  Shared Libraries        │  │
+│  │  actions/devices │  │  lib/grid-status.ts      │  │
+│  │  actions/tokens  │  │  lib/weather.ts          │  │
+│  │  actions/chat    │  │  lib/mcp-auth.ts         │  │
+│  └─────────────────┘  └──────────────────────────┘  │
+│                                                     │
+└───────────────────────┬─────────────────────────────┘
+                        │
+        ┌───────────────┼───────────────┐
+        ▼               ▼               ▼
+┌──────────────┐ ┌────────────┐ ┌──────────────┐
+│  Supabase    │ │  台電 API  │ │  中央氣象署  │
+│  (PostgreSQL │ │  (供電狀態) │ │  (天氣預報)  │
+│   + Auth)    │ │            │ │              │
+└──────────────┘ └────────────┘ └──────────────┘
+```
+
+### MCP Server (`/api/mcp`)
+
+HomePower 透過 MCP (Model Context Protocol) 將資料暴露給 AI 客戶端（Claude Desktop / Claude Code），使用 Streamable HTTP transport，以 Bearer token 驗證。
+
+| 類型 | 名稱 | 說明 |
+|------|------|------|
+| Tool | `get_devices` | 查詢使用者的所有家電設備 |
+| Tool | `get_device_summary` | 設備統計摘要（總數、用電量、類別佔比） |
+| Tool | `calculate_bill` | 根據用電量計算電費（住宅/時間電價） |
+| Tool | `get_usage_by_date_range` | 查詢日期區間的每日用電量 |
+| Tool | `get_monthly_usage_summary` | 月度用電摘要與設備排名 |
+| Tool | `get_energy_saving_tips` | 個人化節電建議 |
+| Resource | `homepower://grid-status` | 台灣電力系統即時供電狀態 |
+| Resource | `homepower://weather-forecast` | 7 天天氣預報與冷氣預估時數 |
+| Prompt | `analyze-monthly` | 分析指定月份用電狀況 |
+| Prompt | `saving-tips` | 個人化節電建議報告 |
+| Prompt | `compare-regions` | 比較不同地區電力與天氣 |
+
+### MCP 客戶端設定
+
+**Claude Code**（貼到專案 `.mcp.json`）：
+```json
+{
+  "mcpServers": {
+    "homepower": {
+      "url": "http://localhost:8088/api/mcp",
+      "headers": { "Authorization": "Bearer hp_YOUR_TOKEN" }
+    }
+  }
+}
+```
+
+**Claude Desktop**（貼到 `claude_desktop_config.json`，需 Node 20+）：
+```json
+{
+  "mcpServers": {
+    "homepower": {
+      "command": "npx",
+      "args": ["mcp-remote", "http://localhost:8088/api/mcp", "--header", "Authorization: Bearer hp_YOUR_TOKEN"]
+    }
+  }
+}
+```
+
+> Token 可在「設定 → API 權杖」頁面建立。若使用 nvm，`command` 請改為 Node 20+ 的 npx 絕對路徑。
+
 ## AI Agent Tools
 
 The AI chat assistant has access to:

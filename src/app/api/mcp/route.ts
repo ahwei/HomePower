@@ -83,7 +83,9 @@ function createMcpServer(userId: string): McpServer {
 // ---- Tools ----
 
 function registerTools(server: McpServer, userId: string) {
-  server.tool("get_devices", "查詢使用者的所有家電設備", {}, async () => {
+  server.registerTool("get_devices", { description: "查詢使用者的所有家電設備" }, async () => {
+    console.log(`[MCP] tool:get_devices`);
+
     const rows = await db
       .select()
       .from(devices)
@@ -104,11 +106,11 @@ function registerTools(server: McpServer, userId: string) {
     );
   });
 
-  server.tool(
+  server.registerTool(
     "get_device_summary",
-    "取得設備統計摘要：總數、啟用數、預估月總用電量、各類別用電佔比",
-    {},
+    { description: "取得設備統計摘要：總數、啟用數、預估月總用電量、各類別用電佔比" },
     async () => {
+      console.log(`[MCP] tool:get_device_summary`);
       const rows = await db
         .select()
         .from(devices)
@@ -144,21 +146,23 @@ function registerTools(server: McpServer, userId: string) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "calculate_bill",
-    "根據用電量計算電費。支援住宅累進制、時間電價二段式、三段式",
     {
-      kwh: z.number().describe("總用電量 kWh"),
-      planType: z
-        .enum(["residential", "time_of_use_2", "time_of_use_3"])
-        .default("residential")
-        .describe("電價方案"),
-      month: z
-        .number()
-        .min(1)
-        .max(12)
-        .optional()
-        .describe("月份（判斷夏月），不填預設當月"),
+      description: "根據用電量計算電費。支援住宅累進制、時間電價二段式、三段式",
+      inputSchema: z.object({
+        kwh: z.number().describe("總用電量 kWh"),
+        planType: z
+          .enum(["residential", "time_of_use_2", "time_of_use_3"])
+          .default("residential")
+          .describe("電價方案"),
+        month: z
+          .number()
+          .min(1)
+          .max(12)
+          .optional()
+          .describe("月份（判斷夏月），不填預設當月"),
+      }),
     },
     async ({
       kwh,
@@ -169,6 +173,7 @@ function registerTools(server: McpServer, userId: string) {
       planType: string;
       month?: number;
     }) => {
+      console.log(`[MCP] tool:calculate_bill`, { kwh, planType, month });
       const isSummer = isSummerMonth(month);
       const result = calculateBill({
         kwh,
@@ -187,12 +192,14 @@ function registerTools(server: McpServer, userId: string) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "get_usage_by_date_range",
-    "查詢指定日期區間的每日用電量（kWh）",
     {
-      startDate: z.string().describe("起始日期 YYYY-MM-DD"),
-      endDate: z.string().describe("結束日期 YYYY-MM-DD"),
+      description: "查詢指定日期區間的每日用電量（kWh）",
+      inputSchema: z.object({
+        startDate: z.string().describe("起始日期 YYYY-MM-DD"),
+        endDate: z.string().describe("結束日期 YYYY-MM-DD"),
+      }),
     },
     async ({
       startDate,
@@ -201,6 +208,7 @@ function registerTools(server: McpServer, userId: string) {
       startDate: string;
       endDate: string;
     }) => {
+      console.log(`[MCP] tool:get_usage_by_date_range`, { startDate, endDate });
       const rows = await db
         .select({
           date: usageLogs.date,
@@ -229,14 +237,17 @@ function registerTools(server: McpServer, userId: string) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "get_monthly_usage_summary",
-    "查詢指定年月的月度用電摘要：總 kWh、日均 kWh、各設備用電排名",
     {
-      year: z.number().describe("年份，例如 2026"),
-      month: z.number().min(1).max(12).describe("月份 1-12"),
+      description: "查詢指定年月的月度用電摘要：總 kWh、日均 kWh、各設備用電排名",
+      inputSchema: z.object({
+        year: z.number().describe("年份，例如 2026"),
+        month: z.number().min(1).max(12).describe("月份 1-12"),
+      }),
     },
     async ({ year, month }: { year: number; month: number }) => {
+      console.log(`[MCP] tool:get_monthly_usage_summary`, { year, month });
       const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
       const endDate =
         month === 12
@@ -285,11 +296,11 @@ function registerTools(server: McpServer, userId: string) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "get_energy_saving_tips",
-    "根據使用者的設備和用電資料，提供節電建議",
-    {},
+    { description: "根據使用者的設備和用電資料，提供節電建議" },
     async () => {
+      console.log(`[MCP] tool:get_energy_saving_tips`);
       const rows = await db
         .select()
         .from(devices)
@@ -333,7 +344,7 @@ function registerTools(server: McpServer, userId: string) {
 // ---- Resources ----
 
 function registerResources(server: McpServer, userId: string) {
-  server.resource(
+  server.registerResource(
     "grid-status",
     "homepower://grid-status",
     {
@@ -352,7 +363,7 @@ function registerResources(server: McpServer, userId: string) {
     }
   );
 
-  server.resource(
+  server.registerResource(
     "weather-forecast",
     "homepower://weather-forecast",
     {
@@ -384,12 +395,14 @@ function registerResources(server: McpServer, userId: string) {
 // ---- Prompts ----
 
 function registerPrompts(server: McpServer) {
-  server.prompt(
+  server.registerPrompt(
     "analyze-monthly",
-    "分析指定月份的用電狀況並提供建議",
     {
-      year: z.string().describe("年份，例如 2026"),
-      month: z.string().describe("月份 1-12"),
+      description: "分析指定月份的用電狀況並提供建議",
+      argsSchema: {
+        year: z.string().describe("年份，例如 2026"),
+        month: z.string().describe("月份 1-12"),
+      },
     },
     async ({ year, month }: { year: string; month: string }) => ({
       messages: [
@@ -415,9 +428,9 @@ function registerPrompts(server: McpServer) {
     })
   );
 
-  server.prompt(
+  server.registerPrompt(
     "saving-tips",
-    "根據目前設備取得個人化節電建議",
+    { description: "根據目前設備取得個人化節電建議" },
     async () => ({
       messages: [
         {
@@ -442,11 +455,13 @@ function registerPrompts(server: McpServer) {
     })
   );
 
-  server.prompt(
+  server.registerPrompt(
     "compare-regions",
-    "比較不同地區的電力與天氣狀況",
     {
-      region: z.string().describe("要比較的地區，例如：台北市"),
+      description: "比較不同地區的電力與天氣狀況",
+      argsSchema: {
+        region: z.string().describe("要比較的地區，例如：台北市"),
+      },
     },
     async ({ region }: { region: string }) => ({
       messages: [
@@ -476,8 +491,27 @@ function registerPrompts(server: McpServer) {
 // ============================================================
 
 async function handleMcpRequest(request: Request): Promise<Response> {
+  const method = request.method;
+  const body = method === "POST" ? await request.clone().text() : null;
+
+  console.log(`[MCP] ${method} /api/mcp`);
+  if (body) {
+    try {
+      const parsed = JSON.parse(body);
+      const rpcMethod = parsed.method ?? parsed.map?.((m: { method: string }) => m.method);
+      console.log(`[MCP] → ${JSON.stringify(rpcMethod)}`, parsed.params ? JSON.stringify(parsed.params) : "");
+    } catch {
+      console.log(`[MCP] → (raw)`, body.slice(0, 200));
+    }
+  }
+
   const result = await authenticateRequest(request);
-  if (result instanceof Response) return result;
+  if (result instanceof Response) {
+    console.log(`[MCP] ✗ auth failed`);
+    return result;
+  }
+
+  console.log(`[MCP] ✓ userId=${result.slice(0, 8)}...`);
 
   const server = createMcpServer(result);
   const transport = new WebStandardStreamableHTTPServerTransport({
@@ -485,15 +519,18 @@ async function handleMcpRequest(request: Request): Promise<Response> {
   });
   await server.connect(transport);
 
-  return transport.handleRequest(request);
+  const response = await transport.handleRequest(request, { parsedBody: body ? JSON.parse(body) : undefined });
+  console.log(`[MCP] ← ${response.status}`);
+  return response;
 }
 
 export async function POST(request: Request) {
   return handleMcpRequest(request);
 }
 
-export async function GET(request: Request) {
-  return handleMcpRequest(request);
+export async function GET() {
+  // Stateless mode: no SSE stream support, return 405
+  return new Response(null, { status: 405 });
 }
 
 export async function DELETE() {

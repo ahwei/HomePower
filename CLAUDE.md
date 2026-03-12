@@ -42,8 +42,17 @@ pnpm db:studio    # Open Drizzle Studio (DB GUI)
 
 Next.js 16 uses `src/proxy.ts` (not `middleware.ts`). It handles:
 - Session refresh on every request
-- Redirect unauthenticated → `/login` (except `/login`, `/auth/*`)
+- Redirect unauthenticated → `/login` (except `/login`, `/auth/*`, `/api/mcp`, `/.well-known`)
 - Redirect authenticated away from `/login` → `/`
+
+### MCP Server
+
+`src/app/api/mcp/route.ts` — Streamable HTTP transport, stateless mode (no SSE):
+- Bearer token auth via `src/lib/mcp-auth.ts` (SHA-256 hashed tokens in `mcp_tokens` table)
+- 6 tools, 2 resources, 3 prompts — registered via `createMcpServer(userId)`
+- Token CRUD via Server Actions in `src/app/actions/tokens.ts`
+- Token management UI at `/settings/tokens`
+- Shared fetch/parse logic in `src/lib/grid-status.ts` and `src/lib/weather.ts`
 
 ### Supabase Clients
 
@@ -84,7 +93,7 @@ src/
 - `src/proxy.ts` — Auth middleware (Next.js 16 proxy pattern)
 - `src/app/(app)/layout.tsx` — Protected layout, fetches user server-side
 - `src/components/app-sidebar.tsx` — Navigation + user dropdown + passkey registration
-- `src/db/schema.ts` — Drizzle ORM schema (devices, usage_logs, user_settings)
+- `src/db/schema.ts` — Drizzle ORM schema (devices, usage_logs, user_settings, mcp_tokens)
 - `src/db/index.ts` — Drizzle DB singleton instance
 - `src/app/actions/devices.ts` — Server Actions for device CRUD
 - `src/lib/utils.ts` — `cn()` helper (clsx + tailwind-merge)
