@@ -111,11 +111,15 @@ export function ChatHistory() {
       ) : data && data.items.length > 0 ? (
         <div className="space-y-2">
           {data.items.map((session) => (
-            <button
+            <div
               key={session.id}
-              type="button"
+              role="button"
+              tabIndex={0}
               onClick={() => router.push(`/chat/${session.id}`)}
-              className="group flex w-full items-center gap-3 rounded-lg border p-4 text-left transition-colors hover:bg-muted"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") router.push(`/chat/${session.id}`);
+              }}
+              className="group flex w-full cursor-pointer items-center gap-3 rounded-lg border p-4 text-left transition-colors hover:bg-muted"
             >
               <MessageSquare className="h-5 w-5 shrink-0 text-muted-foreground" />
               <div className="min-w-0 flex-1">
@@ -133,7 +137,7 @@ export function ChatHistory() {
               >
                 <Trash2 className="h-4 w-4 text-muted-foreground" />
               </Button>
-            </button>
+            </div>
           ))}
         </div>
       ) : (
