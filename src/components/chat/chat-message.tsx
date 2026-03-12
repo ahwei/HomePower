@@ -7,6 +7,7 @@ import {
   MessageContent,
   MessageResponse,
 } from "@/components/ai-elements/message";
+import { cn } from "@/lib/utils";
 import {
   Tool,
   ToolHeader,
@@ -24,55 +25,57 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
   return (
     <Message from={message.role}>
-      {!isUser && (
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-          <Bot className="h-4 w-4" />
+      <div className={cn("flex items-start gap-3", isUser && "flex-row-reverse")}>
+        <div
+          className={cn(
+            "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+            isUser
+              ? "bg-primary text-primary-foreground"
+              : "bg-muted text-muted-foreground"
+          )}
+        >
+          {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
         </div>
-      )}
-      <MessageContent>
-        {message.parts.map((part, i) => {
-          if (part.type === "text") {
-            if (!part.text) return null;
-            return isUser ? (
-              <div key={i} className="whitespace-pre-wrap">
-                {part.text}
-              </div>
-            ) : (
-              <MessageResponse key={i}>{part.text}</MessageResponse>
-            );
-          }
-          if (part.type?.startsWith("tool-")) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const toolPart = part as any;
-            return (
-              <Tool key={i}>
-                <ToolHeader
-                  type={toolPart.type as "tool-getDevices"}
-                  state={toolPart.state as "output-available"}
-                  title={getToolTitle(toolPart.toolName)}
-                />
-                <ToolContent>
-                  {toolPart.input && (
-                    <ToolInput input={toolPart.input} />
-                  )}
-                  {(toolPart.output || toolPart.errorText) && (
-                    <ToolOutput
-                      output={toolPart.output}
-                      errorText={toolPart.errorText}
-                    />
-                  )}
-                </ToolContent>
-              </Tool>
-            );
-          }
-          return null;
-        })}
-      </MessageContent>
-      {isUser && (
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-          <User className="h-4 w-4" />
-        </div>
-      )}
+        <MessageContent>
+          {message.parts.map((part, i) => {
+            if (part.type === "text") {
+              if (!part.text) return null;
+              return isUser ? (
+                <div key={i} className="whitespace-pre-wrap">
+                  {part.text}
+                </div>
+              ) : (
+                <MessageResponse key={i}>{part.text}</MessageResponse>
+              );
+            }
+            if (part.type?.startsWith("tool-")) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const toolPart = part as any;
+              return (
+                <Tool key={i}>
+                  <ToolHeader
+                    type={toolPart.type as "tool-getDevices"}
+                    state={toolPart.state as "output-available"}
+                    title={getToolTitle(toolPart.toolName)}
+                  />
+                  <ToolContent>
+                    {toolPart.input && (
+                      <ToolInput input={toolPart.input} />
+                    )}
+                    {(toolPart.output || toolPart.errorText) && (
+                      <ToolOutput
+                        output={toolPart.output}
+                        errorText={toolPart.errorText}
+                      />
+                    )}
+                  </ToolContent>
+                </Tool>
+              );
+            }
+            return null;
+          })}
+        </MessageContent>
+      </div>
     </Message>
   );
 }

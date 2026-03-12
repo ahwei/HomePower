@@ -33,7 +33,7 @@ export default async function ChatDetailPage({
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
           <Link
-            href="/chat"
+            href="/chat/history"
             className="flex items-center text-sm text-muted-foreground hover:text-foreground"
           >
             <ChevronLeft className="mr-1 h-4 w-4" />
@@ -53,7 +53,7 @@ export default async function ChatDetailPage({
         <SidebarTrigger className="-ml-1" />
         <Separator orientation="vertical" className="mr-2 h-4" />
         <Link
-          href="/chat"
+          href="/chat/history"
           className="flex items-center text-sm text-muted-foreground hover:text-foreground"
         >
           <ChevronLeft className="mr-1 h-4 w-4" />

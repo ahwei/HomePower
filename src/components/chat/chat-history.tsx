@@ -95,7 +95,7 @@ export function ChatHistory() {
             className="w-full rounded-lg border bg-background py-2 pl-9 pr-4 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
           />
         </div>
-        <Button size="sm" onClick={() => router.push("/chat/new")}>
+        <Button size="sm" onClick={() => router.push("/chat")}>
           <Plus className="mr-1 h-4 w-4" />
           新對話
         </Button>
