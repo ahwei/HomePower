@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import {
   LayoutDashboard,
   Plug,
@@ -8,12 +9,15 @@ import {
   LogOut,
   Zap,
   KeyRound,
+  Camera,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { compressImage, uploadToStorage } from "@/lib/upload-image";
+import { toast } from "sonner";
 
 import {
   Sidebar,
@@ -47,10 +51,35 @@ export function AppSidebar({ user }: { user: User | null }) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push("/login");
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    try {
+      const compressed = await compressImage(file, {
+        maxSizeMB: 0.2,
+        maxWidthOrHeight: 256,
+      });
+      const publicUrl = await uploadToStorage(
+        "avatars",
+        `${user.id}/avatar.webp`,
+        compressed
+      );
+      await supabase.auth.updateUser({
+        data: { avatar_url: publicUrl + "?t=" + Date.now() },
+      });
+      router.refresh();
+      toast.success("頭貼已更新");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "上傳失敗");
+    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const displayName = user?.email || "User";
@@ -102,6 +131,13 @@ export function AppSidebar({ user }: { user: User | null }) {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={handleAvatarUpload}
+        />
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
@@ -126,6 +162,10 @@ export function AppSidebar({ user }: { user: User | null }) {
                 }
               />
               <DropdownMenuContent side="top" align="start" className="w-56">
+                <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                  <Camera className="mr-2 h-4 w-4" />
+                  更換頭貼
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />
                   登出

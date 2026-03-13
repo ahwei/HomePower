@@ -7,6 +7,7 @@ import {
   MessageContent,
   MessageResponse,
 } from "@/components/ai-elements/message";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import {
   Tool,
@@ -18,24 +19,34 @@ import {
 
 interface ChatMessageProps {
   message: UIMessage;
+  avatarUrl?: string;
 }
 
-export function ChatMessage({ message }: ChatMessageProps) {
+export function ChatMessage({ message, avatarUrl }: ChatMessageProps) {
   const isUser = message.role === "user";
 
   return (
     <Message from={message.role}>
       <div className={cn("flex items-start gap-3", isUser && "flex-row-reverse")}>
-        <div
-          className={cn(
-            "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
-            isUser
-              ? "bg-primary text-primary-foreground"
-              : "bg-muted text-muted-foreground"
-          )}
-        >
-          {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
-        </div>
+        {isUser && avatarUrl ? (
+          <Avatar className="h-8 w-8 shrink-0">
+            <AvatarImage src={avatarUrl} alt="User" />
+            <AvatarFallback>
+              <User className="h-4 w-4" />
+            </AvatarFallback>
+          </Avatar>
+        ) : (
+          <div
+            className={cn(
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+              isUser
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground"
+            )}
+          >
+            {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+          </div>
+        )}
         <MessageContent>
           {message.parts.map((part, i) => {
             if (part.type === "text") {

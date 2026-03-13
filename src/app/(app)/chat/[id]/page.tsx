@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { getChatMessages } from "@/app/actions/chat";
 import { ChatPanel } from "@/components/chat/chat-panel";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function ChatDetailPage({
   params,
@@ -11,6 +12,12 @@ export default async function ChatDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
 
   let session: { title: string } | null = null;
   let initialMessages: Array<{ role: "user" | "assistant"; content: string }> = [];
@@ -62,7 +69,7 @@ export default async function ChatDetailPage({
         <Separator orientation="vertical" className="mr-2 h-4" />
         <h1 className="truncate text-lg font-semibold">{session.title}</h1>
       </header>
-      <ChatPanel sessionId={id} initialMessages={initialMessages} />
+      <ChatPanel sessionId={id} initialMessages={initialMessages} avatarUrl={avatarUrl} />
     </>
   );
 }
