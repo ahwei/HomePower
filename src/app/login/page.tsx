@@ -30,6 +30,8 @@ export default function LoginPage() {
   const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
   const [mfaLoading, setMfaLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showPasskeyPrompt, setShowPasskeyPrompt] = useState(false);
+  const [passkeyRegistering, setPasskeyRegistering] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -56,20 +58,28 @@ export default function LoginPage() {
       if (data.session) {
         const { data: aalData } =
           await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        const { data: factorsData } = await supabase.auth.mfa.listFactors();
+        const verifiedPasskey = factorsData?.all?.find(
+          (f) => f.factor_type === "webauthn" && f.status === "verified"
+        );
+
+        // If AAL2 required and has passkey → verify
         if (
           aalData &&
           aalData.nextLevel === "aal2" &&
-          aalData.currentLevel === "aal1"
+          aalData.currentLevel === "aal1" &&
+          verifiedPasskey
         ) {
-          const { data: factorsData } = await supabase.auth.mfa.listFactors();
-          const webauthnFactor = factorsData?.all?.find(
-            (f) => f.factor_type === "webauthn" && f.status === "verified"
-          );
-          if (webauthnFactor) {
-            setMfaFactorId(webauthnFactor.id);
-            return;
-          }
+          setMfaFactorId(verifiedPasskey.id);
+          return;
         }
+
+        // No passkey registered → prompt to register
+        if (!verifiedPasskey) {
+          setShowPasskeyPrompt(true);
+          return;
+        }
+
         router.push("/");
         router.refresh();
       }
@@ -100,6 +110,76 @@ export default function LoginPage() {
 
     setMfaLoading(false);
   };
+
+  const handleRegisterPasskey = async () => {
+    setPasskeyRegistering(true);
+    setServerError(null);
+
+    try {
+      const { error } = await supabase.auth.mfa.webauthn.register({
+        friendlyName: "homepower-passkey",
+      });
+      if (error) {
+        setServerError(error.message);
+        setPasskeyRegistering(false);
+        return;
+      }
+    } catch {
+      setServerError("Passkey 註冊失敗，請再試一次。");
+      setPasskeyRegistering(false);
+      return;
+    }
+
+    router.push("/");
+    router.refresh();
+  };
+
+  const handleSkipPasskey = () => {
+    router.push("/");
+    router.refresh();
+  };
+
+  if (showPasskeyPrompt) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <Card className="w-full max-w-sm">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+              <Fingerprint className="h-6 w-6 text-primary" />
+            </div>
+            <CardTitle className="text-2xl">設定 Passkey</CardTitle>
+            <CardDescription>
+              使用 Passkey 可以更安全地保護你的帳號，下次登入時將需要驗證
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            {serverError && (
+              <p className="text-sm text-destructive">{serverError}</p>
+            )}
+            <Button
+              className="w-full"
+              onClick={handleRegisterPasskey}
+              disabled={passkeyRegistering}
+            >
+              {passkeyRegistering && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              <Fingerprint className="mr-2 h-4 w-4" />
+              註冊 Passkey
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full"
+              onClick={handleSkipPasskey}
+              disabled={passkeyRegistering}
+            >
+              稍後再說
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (mfaFactorId) {
     return (
