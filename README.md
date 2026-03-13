@@ -22,6 +22,7 @@ A full-stack home energy management dashboard with AI-powered electricity bill o
 | State | Redux Toolkit |
 | Database | Supabase (PostgreSQL) |
 | Auth | Supabase Auth (Email/Password) |
+| Storage | Supabase Storage (avatars, device-images) |
 | AI | Vercel AI SDK v6 + OpenAI |
 | Charts | Recharts v3 |
 | Testing | Vitest |
