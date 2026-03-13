@@ -10,7 +10,9 @@ import {
   Lightbulb,
   Car,
   Trash2,
+  Pencil,
 } from "lucide-react";
+import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -33,9 +35,10 @@ interface DeviceCardProps {
   device: Device;
   onToggle: (id: string, isActive: boolean) => void;
   onDelete: (id: string) => void;
+  onEdit: (device: Device) => void;
 }
 
-export function DeviceCard({ device, onToggle, onDelete }: DeviceCardProps) {
+export function DeviceCard({ device, onToggle, onDelete, onEdit }: DeviceCardProps) {
   const Icon = CATEGORY_ICONS[device.category] ?? Monitor;
   const monthlyKwh = computeMonthlyKwh(device);
 
@@ -45,9 +48,21 @@ export function DeviceCard({ device, onToggle, onDelete }: DeviceCardProps) {
       className={!device.isActive ? "opacity-60" : ""}
     >
       <CardContent className="flex items-start gap-3 p-4">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-          <Icon className="h-5 w-5 text-muted-foreground" />
-        </div>
+        {device.imageUrl ? (
+          <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg">
+            <Image
+              src={device.imageUrl}
+              alt={device.name}
+              fill
+              className="object-cover"
+              sizes="40px"
+            />
+          </div>
+        ) : (
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+            <Icon className="h-5 w-5 text-muted-foreground" />
+          </div>
+        )}
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between">
@@ -73,15 +88,26 @@ export function DeviceCard({ device, onToggle, onDelete }: DeviceCardProps) {
           </div>
         </div>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="shrink-0 text-muted-foreground hover:text-destructive"
-          onClick={() => onDelete(device.id)}
-          aria-label={`刪除 ${device.name}`}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        <div className="flex shrink-0 flex-col gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            onClick={() => onEdit(device)}
+            aria-label={`編輯 ${device.name}`}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+            onClick={() => onDelete(device.id)}
+            aria-label={`刪除 ${device.name}`}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

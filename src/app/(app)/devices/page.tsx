@@ -4,10 +4,22 @@ import { useState } from "react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { DeviceList } from "@/components/devices/device-list";
-import { AddDeviceDialog } from "@/components/devices/add-device-dialog";
+import { DeviceDialog } from "@/components/devices/device-dialog";
+import type { Device } from "@/lib/types";
 
 export default function DevicesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDevice, setEditDevice] = useState<Device | undefined>();
+
+  function handleAdd() {
+    setEditDevice(undefined);
+    setDialogOpen(true);
+  }
+
+  function handleEdit(device: Device) {
+    setEditDevice(device);
+    setDialogOpen(true);
+  }
 
   return (
     <>
@@ -17,8 +29,12 @@ export default function DevicesPage() {
         <h1 className="text-lg font-semibold">設備管理</h1>
       </header>
       <main className="flex-1 p-6">
-        <DeviceList onAddClick={() => setDialogOpen(true)} />
-        <AddDeviceDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+        <DeviceList onAddClick={handleAdd} onEdit={handleEdit} />
+        <DeviceDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          device={editDevice}
+        />
       </main>
     </>
   );
