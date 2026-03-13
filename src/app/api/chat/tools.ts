@@ -32,6 +32,7 @@ export function createTools(userId: string) {
             ratedPowerW: d.ratedPowerW,
             dailyHours: Number(d.dailyHours),
             isActive: d.isActive,
+            imageUrl: d.imageUrl,
             monthlyKwh: Math.round(
               (d.ratedPowerW * Number(d.dailyHours) * 30) / 1000
             ),

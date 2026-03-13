@@ -1,25 +1,34 @@
 "use client";
 
-import type { UIMessage } from "ai";
-import { Bot, User } from "lucide-react";
 import {
   Message,
   MessageContent,
   MessageResponse,
 } from "@/components/ai-elements/message";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { cn } from "@/lib/utils";
 import {
   Tool,
-  ToolHeader,
   ToolContent,
+  ToolHeader,
   ToolInput,
   ToolOutput,
 } from "@/components/ai-elements/tool";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
+import type { UIMessage } from "ai";
+import { isToolUIPart } from "ai";
+import { Bot, User } from "lucide-react";
+import { DeviceToolOutput } from "./device-tool-output";
 
 interface ChatMessageProps {
   message: UIMessage;
   avatarUrl?: string;
+}
+
+/** Extract tool name from part type "tool-xxx" or from toolName property */
+function extractToolName(part: { type: string; toolName?: string }): string {
+  if (part.toolName) return part.toolName;
+  if (part.type.startsWith("tool-")) return part.type.slice(5);
+  return "";
 }
 
 export function ChatMessage({ message, avatarUrl }: ChatMessageProps) {
@@ -27,7 +36,9 @@ export function ChatMessage({ message, avatarUrl }: ChatMessageProps) {
 
   return (
     <Message from={message.role}>
-      <div className={cn("flex items-start gap-3", isUser && "flex-row-reverse")}>
+      <div
+        className={cn("flex items-start gap-3", isUser && "flex-row-reverse")}
+      >
         {isUser && avatarUrl ? (
           <Avatar className="h-8 w-8 shrink-0">
             <AvatarImage src={avatarUrl} alt="User" />
@@ -41,10 +52,14 @@ export function ChatMessage({ message, avatarUrl }: ChatMessageProps) {
               "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
               isUser
                 ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground"
+                : "bg-muted text-muted-foreground",
             )}
           >
-            {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+            {isUser ? (
+              <User className="h-4 w-4" />
+            ) : (
+              <Bot className="h-4 w-4" />
+            )}
           </div>
         )}
         <MessageContent>
@@ -59,28 +74,36 @@ export function ChatMessage({ message, avatarUrl }: ChatMessageProps) {
                 <MessageResponse key={i}>{part.text}</MessageResponse>
               );
             }
-            if (part.type?.startsWith("tool-")) {
+            if (isToolUIPart(part)) {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const toolPart = part as any;
+              const tp = part as any;
+              const toolName = extractToolName(tp);
+              const isDeviceList =
+                toolName === "getDevices" &&
+                tp.state === "output-available" &&
+                Array.isArray(tp.output);
               return (
-                <Tool key={i}>
-                  <ToolHeader
-                    type={toolPart.type as "tool-getDevices"}
-                    state={toolPart.state as "output-available"}
-                    title={getToolTitle(toolPart.toolName)}
-                  />
-                  <ToolContent>
-                    {toolPart.input && (
-                      <ToolInput input={toolPart.input} />
-                    )}
-                    {(toolPart.output || toolPart.errorText) && (
-                      <ToolOutput
-                        output={toolPart.output}
-                        errorText={toolPart.errorText}
-                      />
-                    )}
-                  </ToolContent>
-                </Tool>
+                <div key={i}>
+                  <Tool>
+                    <ToolHeader
+                      type={tp.type as "tool-getDevices"}
+                      state={tp.state as "output-available"}
+                      title={getToolTitle(toolName)}
+                    />
+                    <ToolContent>
+                      {tp.input && <ToolInput input={tp.input} />}
+                      {(tp.output || tp.errorText) && (
+                        <ToolOutput
+                          output={tp.output}
+                          errorText={tp.errorText}
+                        />
+                      )}
+                    </ToolContent>
+                  </Tool>
+                  {isDeviceList && (
+                    <DeviceToolOutput devices={tp.output} />
+                  )}
+                </div>
               );
             }
             return null;
