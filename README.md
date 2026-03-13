@@ -21,7 +21,7 @@ A full-stack home energy management dashboard with AI-powered electricity bill o
 | ORM | Drizzle ORM + pg |
 | State | Redux Toolkit |
 | Database | Supabase (PostgreSQL) |
-| Auth | Supabase Auth (Email/Password + WebAuthn Passkey MFA) |
+| Auth | Supabase Auth (Email/Password) |
 | AI | Vercel AI SDK v6 + OpenAI |
 | Charts | Recharts v3 |
 | Testing | Vitest |

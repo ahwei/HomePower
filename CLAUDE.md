@@ -18,7 +18,7 @@ pnpm db:studio    # Open Drizzle Studio (DB GUI)
 - **Next.js 16** (App Router, React 19, Turbopack)
 - **TypeScript** strict mode
 - **Tailwind CSS v4** + **shadcn/ui** (base-nova style, lucide icons)
-- **Supabase** — Auth (email/password + WebAuthn passkey MFA)
+- **Supabase** — Auth (email/password)
 - **Drizzle ORM** + **pg** — PostgreSQL database access (schema in `src/db/schema.ts`)
 - **react-hook-form** + **Zod v4** for form validation
 - **sonner** for toast notifications
@@ -34,9 +34,7 @@ pnpm db:studio    # Open Drizzle Studio (DB GUI)
 ### Auth Flow
 
 1. Login: email/password via `supabase.auth.signInWithPassword()`
-2. If MFA required (AAL2): WebAuthn passkey verification via `supabase.auth.mfa.webauthn.authenticate()`
-3. Passkey registration (post-login): `supabase.auth.mfa.webauthn.register()` in sidebar dropdown
-4. No public registration — accounts created in Supabase Dashboard only
+2. No public registration — accounts created in Supabase Dashboard only
 
 ### Middleware (Proxy)
 
@@ -92,7 +90,7 @@ src/
 
 - `src/proxy.ts` — Auth middleware (Next.js 16 proxy pattern)
 - `src/app/(app)/layout.tsx` — Protected layout, fetches user server-side
-- `src/components/app-sidebar.tsx` — Navigation + user dropdown + passkey registration
+- `src/components/app-sidebar.tsx` — Navigation + user dropdown
 - `src/db/schema.ts` — Drizzle ORM schema (devices, usage_logs, user_settings, mcp_tokens)
 - `src/db/index.ts` — Drizzle DB singleton instance
 - `src/app/actions/devices.ts` — Server Actions for device CRUD

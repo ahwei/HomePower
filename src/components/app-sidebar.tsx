@@ -6,7 +6,6 @@ import {
   Receipt,
   MessageSquare,
   LogOut,
-  Fingerprint,
   Zap,
   KeyRound,
 } from "lucide-react";
@@ -52,15 +51,6 @@ export function AppSidebar({ user }: { user: User | null }) {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push("/login");
-  };
-
-  const handleRegisterPasskey = async () => {
-    const { error } = await supabase.auth.mfa.webauthn.register({
-      friendlyName: `${user?.email ?? "user"}-passkey`,
-    });
-    if (error) {
-      console.error("Passkey registration failed:", error.message);
-    }
   };
 
   const displayName = user?.email || "User";
@@ -136,10 +126,6 @@ export function AppSidebar({ user }: { user: User | null }) {
                 }
               />
               <DropdownMenuContent side="top" align="start" className="w-56">
-                <DropdownMenuItem onClick={handleRegisterPasskey}>
-                  <Fingerprint className="mr-2 h-4 w-4" />
-                  註冊 Passkey
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />
                   登出
