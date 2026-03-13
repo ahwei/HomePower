@@ -15,16 +15,16 @@ A full-stack home energy management dashboard with AI-powered electricity bill o
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | Next.js 15 (App Router) |
+| Framework | Next.js 16 (App Router, React 19, Turbopack) |
 | Language | TypeScript (strict mode) |
 | Styling | Tailwind CSS v4 + shadcn/ui |
-| State (Server) | TanStack React Query v5 |
-| State (Client) | Zustand v5 |
+| ORM | Drizzle ORM + pg |
+| State | Redux Toolkit |
 | Database | Supabase (PostgreSQL) |
-| Auth | Supabase Auth |
-| AI | Vercel AI SDK v6 |
-| Charts | Recharts v2 |
-| Testing | Playwright (E2E) + Vitest (Unit) |
+| Auth | Supabase Auth (Email/Password + WebAuthn Passkey MFA) |
+| AI | Vercel AI SDK v6 + OpenAI |
+| Charts | Recharts v3 |
+| Testing | Vitest |
 | Deployment | Vercel |
 
 ## Data Sources
@@ -47,11 +47,8 @@ A full-stack home energy management dashboard with AI-powered electricity bill o
 | # | 服務 | 用途 | 申請連結 | 費用 |
 |---|------|------|----------|------|
 | 1 | **Supabase** | 資料庫 + Auth | https://supabase.com/dashboard | Free tier |
-| 2 | **Google OAuth** | 登入 | https://console.cloud.google.com/apis/credentials | 免費 |
-| 3 | **GitHub OAuth** | 登入 | https://github.com/settings/developers | 免費 |
-| 4 | **中央氣象署 Open API** | 天氣預報 | https://opendata.cwa.gov.tw | 免費（需註冊） |
-| 5 | **OpenAI API** | AI Chat | https://platform.openai.com/api-keys | 依用量計費 |
-| 6 | **Tavily API** | AI 網路搜尋 | https://tavily.com | 免費 1,000 次/月 |
+| 2 | **中央氣象署 Open API** | 天氣預報 | https://opendata.cwa.gov.tw | 免費（需註冊） |
+| 3 | **OpenAI API** | AI Chat + 網路搜尋 | https://platform.openai.com/api-keys | 依用量計費 |
 
 > 詳細申請步驟請參考 `.env.example` 內的註解說明。
 
@@ -69,42 +66,45 @@ pnpm install
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:8088](http://localhost:8088).
 
 ### Database Setup
 
-Run the SQL schema in your Supabase SQL Editor:
-
-```sql
--- See HomePower-Frontend-Design-Document.md Section 9.3 for full schema
--- Tables: devices, usage_logs, user_settings (with RLS policies)
-```
-
-Generate TypeScript types:
+使用 Drizzle ORM 管理資料庫 schema（定義在 `src/db/schema.ts`）：
 
 ```bash
-npx supabase gen types typescript --project-id your_project_id > src/lib/supabase/types.ts
+pnpm db:push      # 將 schema 推送到資料庫（開發用）
+pnpm db:generate  # 產生 migration 檔案
+pnpm db:studio    # 開啟 Drizzle Studio（DB GUI）
 ```
 
 ## Project Structure
 
 ```
 src/
-├── app/                          # Next.js App Router pages + API routes
-│   ├── page.tsx                  # Dashboard (home)
-│   ├── devices/page.tsx          # Device management
-│   ├── billing/page.tsx          # Bill calculator
-│   ├── chat/page.tsx             # AI chat
-│   └── api/                      # Route handlers (BFF)
-├── features/                     # Feature-based modules
-│   ├── dashboard/                # Grid status, charts, weather
-│   ├── devices/                  # Device CRUD, schedules
-│   ├── billing/                  # Plan selector, bill calculation
-│   └── chat/                     # AI chat UI + agent tools
-└── lib/                          # Shared utilities
-    ├── supabase/                 # Client/server clients + types
-    ├── constants/                # Electricity plans, device presets
-    └── stores/                   # Zustand stores
+├── app/                   # Next.js App Router pages + API routes
+│   ├── (app)/             # Protected route group (sidebar shell)
+│   │   ├── page.tsx       # Dashboard (home)
+│   │   ├── devices/       # Device management
+│   │   ├── billing/       # Bill calculator
+│   │   ├── chat/          # AI chat
+│   │   └── settings/      # Settings (tokens)
+│   ├── login/             # Public login page
+│   ├── auth/callback/     # Supabase auth callback
+│   └── api/               # Route handlers
+│       ├── chat/          # AI chat API
+│       ├── mcp/           # MCP server
+│       ├── grid-status/   # 台電供電 API
+│       └── weather/       # 天氣預報 API
+├── components/
+│   ├── ui/                # shadcn/ui base components
+│   ├── dashboard/         # Dashboard feature components
+│   └── billing/           # Billing feature components
+├── constants/             # App constants (device presets, electricity plans)
+├── db/                    # Drizzle ORM schema + singleton instance
+├── hooks/                 # Shared React hooks
+├── store/                 # Redux Toolkit store, slices, provider
+└── lib/                   # Utilities (cn, types, supabase clients)
 ```
 
 ## Simulated Devices
@@ -217,21 +217,19 @@ HomePower 透過 MCP (Model Context Protocol) 將資料暴露給 AI 客戶端（
 
 The AI chat assistant has access to:
 
-- **queryDevices** — Query user's device list and usage
-- **calculateBill** — Calculate electricity cost for given kWh and plan
-- **getGridStatus** — Fetch real-time grid supply status
-- **getWeather** — Get weather forecast for a location
-- **comparePlans** — Compare different electricity plans
-- **searchWeb** — Search for latest electricity information (via Tavily)
+- **getDevices** — 查詢使用者的所有家電設備
+- **getDeviceSummary** — 設備統計摘要（總數、用電量、類別佔比）
+- **getUsageByDateRange** — 查詢日期區間的每日用電量
+- **getMonthlyUsageSummary** — 月度用電摘要與設備排名
+- **calculateElectricityBill** — 根據用電量計算電費（住宅/時間電價）
+- **getUserSettings** — 取得使用者設定（地區等）
+- **getEnergySavingTips** — 個人化節電建議
 
 ## Testing
 
 ```bash
-# Unit tests
-pnpm test
-
-# E2E tests
-pnpm test:e2e
+pnpm test           # Run tests
+pnpm test:watch     # Watch mode
 ```
 
 ## License
