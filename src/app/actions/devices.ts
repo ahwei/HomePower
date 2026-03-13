@@ -1,7 +1,7 @@
 "use server";
 
 import { eq, and, desc } from "drizzle-orm";
-import { db } from "@/db";
+import { authDb } from "@/db";
 import { devices } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 
@@ -17,11 +17,13 @@ async function getUserId(): Promise<string> {
 
 export async function getDevices() {
   const userId = await getUserId();
-  return db
-    .select()
-    .from(devices)
-    .where(eq(devices.userId, userId))
-    .orderBy(desc(devices.createdAt));
+  return authDb(userId, (tx) =>
+    tx
+      .select()
+      .from(devices)
+      .where(eq(devices.userId, userId))
+      .orderBy(desc(devices.createdAt))
+  );
 }
 
 export async function createDevice(data: {
@@ -31,34 +33,40 @@ export async function createDevice(data: {
   dailyHours: number;
 }) {
   const userId = await getUserId();
-  const [row] = await db
-    .insert(devices)
-    .values({
-      userId,
-      name: data.name,
-      category: data.category,
-      ratedPowerW: data.ratedPowerW,
-      dailyHours: String(data.dailyHours),
-    })
-    .returning();
-  return row;
+  return authDb(userId, async (tx) => {
+    const [row] = await tx
+      .insert(devices)
+      .values({
+        userId,
+        name: data.name,
+        category: data.category,
+        ratedPowerW: data.ratedPowerW,
+        dailyHours: String(data.dailyHours),
+      })
+      .returning();
+    return row;
+  });
 }
 
 export async function toggleDevice(id: string, currentIsActive: boolean) {
   const userId = await getUserId();
-  const [row] = await db
-    .update(devices)
-    .set({ isActive: !currentIsActive })
-    .where(and(eq(devices.id, id), eq(devices.userId, userId)))
-    .returning();
-  return row;
+  return authDb(userId, async (tx) => {
+    const [row] = await tx
+      .update(devices)
+      .set({ isActive: !currentIsActive })
+      .where(and(eq(devices.id, id), eq(devices.userId, userId)))
+      .returning();
+    return row;
+  });
 }
 
 export async function deleteDevice(id: string) {
   const userId = await getUserId();
-  await db
-    .delete(devices)
-    .where(and(eq(devices.id, id), eq(devices.userId, userId)));
+  return authDb(userId, (tx) =>
+    tx
+      .delete(devices)
+      .where(and(eq(devices.id, id), eq(devices.userId, userId)))
+  );
 }
 
 export async function updateDevice(
@@ -73,14 +81,16 @@ export async function updateDevice(
 ) {
   const userId = await getUserId();
   const { schedule, dailyHours, ...rest } = data;
-  const [row] = await db
-    .update(devices)
-    .set({
-      ...rest,
-      ...(dailyHours !== undefined && { dailyHours: String(dailyHours) }),
-      ...(schedule !== undefined && { schedule }),
-    })
-    .where(and(eq(devices.id, id), eq(devices.userId, userId)))
-    .returning();
-  return row;
+  return authDb(userId, async (tx) => {
+    const [row] = await tx
+      .update(devices)
+      .set({
+        ...rest,
+        ...(dailyHours !== undefined && { dailyHours: String(dailyHours) }),
+        ...(schedule !== undefined && { schedule }),
+      })
+      .where(and(eq(devices.id, id), eq(devices.userId, userId)))
+      .returning();
+    return row;
+  });
 }

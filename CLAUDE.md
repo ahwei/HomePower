@@ -19,7 +19,7 @@ pnpm db:studio    # Open Drizzle Studio (DB GUI)
 - **TypeScript** strict mode
 - **Tailwind CSS v4** + **shadcn/ui** (base-nova style, lucide icons)
 - **Supabase** — Auth (email/password)
-- **Drizzle ORM** + **pg** — PostgreSQL database access (schema in `src/db/schema.ts`)
+- **Drizzle ORM** + **pg** — PostgreSQL database access (schema in `src/db/schema.ts`), RLS enforced via `authDb()`
 - **react-hook-form** + **Zod v4** for form validation
 - **sonner** for toast notifications
 
@@ -92,7 +92,7 @@ src/
 - `src/app/(app)/layout.tsx` — Protected layout, fetches user server-side
 - `src/components/app-sidebar.tsx` — Navigation + user dropdown
 - `src/db/schema.ts` — Drizzle ORM schema (devices, usage_logs, user_settings, mcp_tokens)
-- `src/db/index.ts` — Drizzle DB singleton instance
+- `src/db/index.ts` — Drizzle DB singleton (`db`) + RLS-enforced wrapper (`authDb`). Use `authDb(userId, fn)` for user-scoped queries; `db` is reserved for admin-level operations (e.g. token validation in `mcp-auth.ts`)
 - `src/app/actions/devices.ts` — Server Actions for device CRUD
 - `src/lib/utils.ts` — `cn()` helper (clsx + tailwind-merge)
 - `components.json` — shadcn/ui configuration
