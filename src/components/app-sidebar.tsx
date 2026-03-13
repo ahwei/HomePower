@@ -8,6 +8,7 @@ import {
   LogOut,
   Fingerprint,
   Zap,
+  KeyRound,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -40,6 +41,7 @@ const navItems = [
   { title: "設備管理", href: "/devices", icon: Plug },
   { title: "電費試算", href: "/billing", icon: Receipt },
   { title: "AI 諮詢", href: "/chat", icon: MessageSquare },
+  { title: "API 權杖", href: "/settings/tokens", icon: KeyRound },
 ];
 
 export function AppSidebar({ user }: { user: User | null }) {
