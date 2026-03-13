@@ -16,7 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Zap, Loader2, Fingerprint, Eye, EyeOff } from "lucide-react";
+import { Zap, Loader2, Eye, EyeOff } from "lucide-react";
 
 const loginSchema = z.object({
   email: z.email("請輸入有效的 Email"),
@@ -27,8 +27,6 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const [serverError, setServerError] = useState<string | null>(null);
-  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
-  const [mfaLoading, setMfaLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const supabase = createClient();
@@ -54,22 +52,6 @@ export default function LoginPage() {
         return;
       }
       if (data.session) {
-        const { data: aalData } =
-          await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-        if (
-          aalData &&
-          aalData.nextLevel === "aal2" &&
-          aalData.currentLevel === "aal1"
-        ) {
-          const { data: factorsData } = await supabase.auth.mfa.listFactors();
-          const webauthnFactor = factorsData?.all?.find(
-            (f) => f.factor_type === "webauthn" && f.status === "verified"
-          );
-          if (webauthnFactor) {
-            setMfaFactorId(webauthnFactor.id);
-            return;
-          }
-        }
         router.push("/");
         router.refresh();
       }
@@ -77,73 +59,6 @@ export default function LoginPage() {
       setServerError("發生未預期的錯誤，請稍後再試。");
     }
   };
-
-  const handlePasskeyVerify = async () => {
-    if (!mfaFactorId) return;
-    setServerError(null);
-    setMfaLoading(true);
-
-    try {
-      const { data, error } = await supabase.auth.mfa.webauthn.authenticate({
-        factorId: mfaFactorId,
-      });
-      if (error) {
-        setServerError(error.message);
-      } else if (data) {
-        router.push("/");
-        router.refresh();
-        return;
-      }
-    } catch {
-      setServerError("Passkey 驗證失敗，請再試一次。");
-    }
-
-    setMfaLoading(false);
-  };
-
-  if (mfaFactorId) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <Card className="w-full max-w-sm">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-              <Fingerprint className="h-6 w-6 text-primary" />
-            </div>
-            <CardTitle className="text-2xl">Passkey 驗證</CardTitle>
-            <CardDescription>
-              請使用你的 Passkey 完成登入驗證
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            {serverError && (
-              <p className="text-sm text-destructive">{serverError}</p>
-            )}
-            <Button
-              className="w-full"
-              onClick={handlePasskeyVerify}
-              disabled={mfaLoading}
-            >
-              {mfaLoading && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              <Fingerprint className="mr-2 h-4 w-4" />
-              驗證 Passkey
-            </Button>
-            <Button
-              variant="ghost"
-              className="w-full"
-              onClick={() => {
-                setMfaFactorId(null);
-                setServerError(null);
-              }}
-            >
-              返回登入
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
