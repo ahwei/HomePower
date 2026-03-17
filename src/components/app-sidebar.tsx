@@ -10,6 +10,7 @@ import {
   Zap,
   KeyRound,
   Camera,
+  FileBarChart,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -42,6 +43,7 @@ import {
 const navItems = [
   { title: "Dashboard", href: "/", icon: LayoutDashboard },
   { title: "設備管理", href: "/devices", icon: Plug },
+  { title: "用電紀錄", href: "/usage-logs", icon: FileBarChart },
   { title: "電費試算", href: "/billing", icon: Receipt },
   { title: "AI 諮詢", href: "/chat", icon: MessageSquare },
   { title: "API 權杖", href: "/settings/tokens", icon: KeyRound },

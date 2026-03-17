@@ -142,7 +142,7 @@ export function CreateTokenDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
             {rawToken ? "權杖已建立" : "建立 API 權杖"}
@@ -205,7 +205,7 @@ export function CreateTokenDialog({
                 </Button>
               </div>
               <TabsContent value="claude-code" className="mt-2 space-y-2">
-                <pre className="rounded-md bg-muted p-3 text-xs font-mono overflow-x-auto max-h-48">
+                <pre className="rounded-md bg-muted p-3 text-xs font-mono overflow-x-auto max-h-48 whitespace-pre-wrap break-all">
                   {claudeCodeConfig}
                 </pre>
                 <p className="text-xs text-muted-foreground">
@@ -214,7 +214,7 @@ export function CreateTokenDialog({
                 </p>
               </TabsContent>
               <TabsContent value="claude-desktop" className="mt-2 space-y-2">
-                <pre className="rounded-md bg-muted p-3 text-xs font-mono overflow-x-auto max-h-48">
+                <pre className="rounded-md bg-muted p-3 text-xs font-mono overflow-x-auto max-h-48 whitespace-pre-wrap break-all">
                   {claudeDesktopConfig}
                 </pre>
                 <p className="text-xs text-muted-foreground">
