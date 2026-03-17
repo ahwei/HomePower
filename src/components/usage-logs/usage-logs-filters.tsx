@@ -70,9 +70,9 @@ export function UsageLogsFilters({
             <SelectValue placeholder="全部設備" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">全部設備</SelectItem>
+            <SelectItem value="all" label="全部設備">全部設備</SelectItem>
             {deviceOptions.map((d) => (
-              <SelectItem key={d.id} value={d.id}>
+              <SelectItem key={d.id} value={d.id} label={d.name}>
                 {d.name}
               </SelectItem>
             ))}
@@ -89,8 +89,8 @@ export function UsageLogsFilters({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="date">日期</SelectItem>
-            <SelectItem value="kwh">用電量</SelectItem>
+            <SelectItem value="date" label="日期">日期</SelectItem>
+            <SelectItem value="kwh" label="用電量">用電量</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -106,8 +106,8 @@ export function UsageLogsFilters({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="desc">新→舊</SelectItem>
-            <SelectItem value="asc">舊→新</SelectItem>
+            <SelectItem value="desc" label="新→舊">新→舊</SelectItem>
+            <SelectItem value="asc" label="舊→新">舊→新</SelectItem>
           </SelectContent>
         </Select>
       </div>
