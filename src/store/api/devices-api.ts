@@ -5,7 +5,7 @@ import {
   toggleDevice as toggleDeviceAction,
   deleteDevice as deleteDeviceAction,
   updateDevice as updateDeviceAction,
-} from "@/app/actions/devices";
+} from "@/actions/devices";
 import type { Device } from "@/lib/types";
 
 const MAX_RETRIES = 3;

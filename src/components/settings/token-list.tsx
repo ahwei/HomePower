@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getTokens, revokeToken } from "@/app/actions/tokens";
+import { getTokens, revokeToken } from "@/actions/tokens";
 import { CreateTokenDialog } from "./create-token-dialog";
 
 interface Token {

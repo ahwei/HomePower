@@ -7,7 +7,7 @@ import {
   getCategoryUsage,
   type UsageLogFilters,
   type UsageLogsResult,
-} from "@/app/actions/usage-logs";
+} from "@/actions/usage-logs";
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1500;

@@ -2,7 +2,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
-import { getChatMessages } from "@/app/actions/chat";
+import { getChatMessages } from "@/actions/chat";
 import { ChatPanel } from "@/components/chat/chat-panel";
 import { createClient } from "@/lib/supabase/server";
 

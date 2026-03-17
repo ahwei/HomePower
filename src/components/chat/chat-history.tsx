@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getChatSessions, deleteChatSession } from "@/app/actions/chat";
+import { getChatSessions, deleteChatSession } from "@/actions/chat";
 
 interface ChatSession {
   id: string;
