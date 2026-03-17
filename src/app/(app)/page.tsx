@@ -4,6 +4,9 @@ import { GridStatusBanner } from "@/components/dashboard/grid-status-banner";
 import { EnergyOverviewCards } from "@/components/dashboard/energy-overview-cards";
 import { DeviceConsumptionChart } from "@/components/dashboard/device-consumption-chart";
 import { DailyUsageChart } from "@/components/dashboard/daily-usage-chart";
+import { WeeklyUsageChart } from "@/components/dashboard/weekly-usage-chart";
+import { MonthlyUsageChart } from "@/components/dashboard/monthly-usage-chart";
+import { TopDevicesChart } from "@/components/dashboard/top-devices-chart";
 import { WeatherForecastStrip } from "@/components/dashboard/weather-forecast-strip";
 
 export default function DashboardPage() {
@@ -18,9 +21,14 @@ export default function DashboardPage() {
         <GridStatusBanner />
         <EnergyOverviewCards />
         <div className="grid gap-4 lg:grid-cols-2">
-          <DeviceConsumptionChart />
-          <DailyUsageChart />
+          <WeeklyUsageChart />
+          <MonthlyUsageChart />
         </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <DeviceConsumptionChart />
+          <TopDevicesChart />
+        </div>
+        <DailyUsageChart />
         <WeatherForecastStrip />
       </main>
     </>

@@ -3,6 +3,7 @@ import { settingsSlice } from "./slices/settings-slice";
 import { devicesApi } from "./api/devices-api";
 import { gridStatusApi } from "./api/grid-status-api";
 import { weatherApi } from "./api/weather-api";
+import { usageLogsApi } from "./api/usage-logs-api";
 
 export const makeStore = () =>
   configureStore({
@@ -11,12 +12,14 @@ export const makeStore = () =>
       [devicesApi.reducerPath]: devicesApi.reducer,
       [gridStatusApi.reducerPath]: gridStatusApi.reducer,
       [weatherApi.reducerPath]: weatherApi.reducer,
+      [usageLogsApi.reducerPath]: usageLogsApi.reducer,
     },
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware().concat(
         devicesApi.middleware,
         gridStatusApi.middleware,
-        weatherApi.middleware
+        weatherApi.middleware,
+        usageLogsApi.middleware
       ),
   });
 

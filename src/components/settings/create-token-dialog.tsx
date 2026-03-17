@@ -102,6 +102,10 @@ export function CreateTokenDialog({
       )
     : "";
 
+  const claudeCodeCli = rawToken
+    ? `claude mcp add homepower --transport http "${mcpUrl}" --header "Authorization: Bearer ${rawToken}"`
+    : "";
+
   const claudeDesktopConfig = rawToken
     ? JSON.stringify(
         {
@@ -122,12 +126,50 @@ export function CreateTokenDialog({
       )
     : "";
 
-  const currentConfig =
-    configTab === "claude-code" ? claudeCodeConfig : claudeDesktopConfig;
+  const vscodeConfig = rawToken
+    ? JSON.stringify(
+        {
+          servers: {
+            homepower: {
+              type: "http",
+              url: mcpUrl,
+              headers: {
+                Authorization: `Bearer ${rawToken}`,
+              },
+            },
+          },
+        },
+        null,
+        2
+      )
+    : "";
+
+  const chatgptConfig = rawToken
+    ? JSON.stringify(
+        {
+          type: "mcp",
+          name: "homepower",
+          url: mcpUrl,
+          headers: {
+            Authorization: `Bearer ${rawToken}`,
+          },
+        },
+        null,
+        2
+      )
+    : "";
+
+  const configMap: Record<string, string> = {
+    "claude-code": claudeCodeConfig,
+    "claude-cli": claudeCodeCli,
+    "claude-desktop": claudeDesktopConfig,
+    "vscode": vscodeConfig,
+    "chatgpt": chatgptConfig,
+  };
 
   const handleCopyConfig = async () => {
-    await navigator.clipboard.writeText(currentConfig);
-    toast.success("設定已複製到剪貼簿");
+    await navigator.clipboard.writeText(configMap[configTab] ?? "");
+    toast.success("已複製到剪貼簿");
   };
 
   const handleClose = (isOpen: boolean) => {
@@ -142,7 +184,7 @@ export function CreateTokenDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
             {rawToken ? "權杖已建立" : "建立 API 權杖"}
@@ -185,27 +227,37 @@ export function CreateTokenDialog({
               value={configTab}
               onValueChange={(v) => setConfigTab(v ?? configTab)}
             >
-              <div className="flex items-center justify-between">
-                <TabsList className="h-8">
-                  <TabsTrigger value="claude-code" className="text-xs px-3">
-                    Claude Code
+              <div className="flex items-center justify-between gap-2">
+                <TabsList className="h-8 flex-wrap">
+                  <TabsTrigger value="claude-code" className="text-xs px-2">
+                    .mcp.json
                   </TabsTrigger>
-                  <TabsTrigger value="claude-desktop" className="text-xs px-3">
-                    Claude Desktop
+                  <TabsTrigger value="claude-cli" className="text-xs px-2">
+                    CLI
+                  </TabsTrigger>
+                  <TabsTrigger value="claude-desktop" className="text-xs px-2">
+                    Desktop
+                  </TabsTrigger>
+                  <TabsTrigger value="vscode" className="text-xs px-2">
+                    Copilot / Codex
+                  </TabsTrigger>
+                  <TabsTrigger value="chatgpt" className="text-xs px-2">
+                    ChatGPT
                   </TabsTrigger>
                 </TabsList>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 text-xs"
+                  className="h-7 shrink-0 text-xs"
                   onClick={handleCopyConfig}
                 >
                   <Copy className="mr-1 h-3 w-3" />
-                  複製設定
+                  複製
                 </Button>
               </div>
+
               <TabsContent value="claude-code" className="mt-2 space-y-2">
-                <pre className="rounded-md bg-muted p-3 text-xs font-mono overflow-x-auto max-h-48">
+                <pre className="rounded-md bg-muted p-3 text-xs font-mono overflow-x-auto max-h-48 whitespace-pre-wrap break-all">
                   {claudeCodeConfig}
                 </pre>
                 <p className="text-xs text-muted-foreground">
@@ -213,8 +265,18 @@ export function CreateTokenDialog({
                   <code className="rounded bg-muted px-1">.mcp.json</code>
                 </p>
               </TabsContent>
+
+              <TabsContent value="claude-cli" className="mt-2 space-y-2">
+                <pre className="rounded-md bg-muted p-3 text-xs font-mono overflow-x-auto max-h-48 whitespace-pre-wrap break-all">
+                  {claudeCodeCli}
+                </pre>
+                <p className="text-xs text-muted-foreground">
+                  在終端機直接執行，Claude Code 會自動新增 MCP 設定
+                </p>
+              </TabsContent>
+
               <TabsContent value="claude-desktop" className="mt-2 space-y-2">
-                <pre className="rounded-md bg-muted p-3 text-xs font-mono overflow-x-auto max-h-48">
+                <pre className="rounded-md bg-muted p-3 text-xs font-mono overflow-x-auto max-h-48 whitespace-pre-wrap break-all">
                   {claudeDesktopConfig}
                 </pre>
                 <p className="text-xs text-muted-foreground">
@@ -226,9 +288,27 @@ export function CreateTokenDialog({
                   <code className="rounded bg-muted px-1">
                     npx mcp-remote
                   </code>
-                  ）。若使用 nvm，請將{" "}
-                  <code className="rounded bg-muted px-1">command</code>{" "}
-                  改為 Node 20+ 的 npx 絕對路徑
+                  ）
+                </p>
+              </TabsContent>
+
+              <TabsContent value="vscode" className="mt-2 space-y-2">
+                <pre className="rounded-md bg-muted p-3 text-xs font-mono overflow-x-auto max-h-48 whitespace-pre-wrap break-all">
+                  {vscodeConfig}
+                </pre>
+                <p className="text-xs text-muted-foreground">
+                  貼到專案的{" "}
+                  <code className="rounded bg-muted px-1">.vscode/mcp.json</code>
+                  ，適用於 GitHub Copilot 和 OpenAI Codex
+                </p>
+              </TabsContent>
+
+              <TabsContent value="chatgpt" className="mt-2 space-y-2">
+                <pre className="rounded-md bg-muted p-3 text-xs font-mono overflow-x-auto max-h-48 whitespace-pre-wrap break-all">
+                  {chatgptConfig}
+                </pre>
+                <p className="text-xs text-muted-foreground">
+                  在 ChatGPT 設定 → MCP 中新增，貼上此 JSON 設定
                 </p>
               </TabsContent>
             </Tabs>
