@@ -18,7 +18,7 @@ pnpm db:studio    # Open Drizzle Studio (DB GUI)
 - **Next.js 16** (App Router, React 19, Turbopack)
 - **TypeScript** strict mode
 - **Tailwind CSS v4** + **shadcn/ui** (base-nova style, lucide icons)
-- **Supabase** — Auth (email/password)
+- **Supabase** — Auth (email/password) + Storage (avatars, device-images)
 - **Drizzle ORM** + **pg** — PostgreSQL database access (schema in `src/db/schema.ts`), RLS enforced via `authDb()`
 - **react-hook-form** + **Zod v4** for form validation
 - **sonner** for toast notifications
@@ -57,6 +57,16 @@ Next.js 16 uses `src/proxy.ts` (not `middleware.ts`). It handles:
 - `src/lib/supabase/client.ts` — Browser client (`createBrowserClient` from `@supabase/ssr`)
 - `src/lib/supabase/server.ts` — Server client with cookie management (`createServerClient`)
 
+### Supabase Storage
+
+- **Buckets**: `avatars` (public), `device-images` (public) — write restricted by RLS to user's own folder
+- **Paths**: `avatars/{userId}/avatar.webp`, `device-images/{userId}/{deviceId}.webp`
+- **Avatar URL**: stored in `user.user_metadata.avatar_url` (Supabase Auth metadata)
+- **Device image URL**: stored in `devices.image_url` column
+- **Upload utility**: `src/lib/upload-image.ts` — client-side compression via `browser-image-compression` + upload to Storage
+- **Migration**: `supabase/migrations/20260313_storage_buckets.sql`
+- **Architecture doc**: `docs/storage-architecture.md`
+
 ### Project Structure
 
 ```
@@ -93,7 +103,8 @@ src/
 - `src/components/app-sidebar.tsx` — Navigation + user dropdown
 - `src/db/schema.ts` — Drizzle ORM schema (devices, usage_logs, user_settings, mcp_tokens)
 - `src/db/index.ts` — Drizzle DB singleton (`db`) + RLS-enforced wrapper (`authDb`). Use `authDb(userId, fn)` for user-scoped queries; `db` is reserved for admin-level operations (e.g. token validation in `mcp-auth.ts`)
-- `src/app/actions/devices.ts` — Server Actions for device CRUD
+- `src/app/actions/devices.ts` — Server Actions for device CRUD (includes storage cleanup on delete)
+- `src/lib/upload-image.ts` — Image compression + Supabase Storage upload utilities
 - `src/lib/utils.ts` — `cn()` helper (clsx + tailwind-merge)
 - `components.json` — shadcn/ui configuration
 - `drizzle.config.ts` — Drizzle Kit configuration

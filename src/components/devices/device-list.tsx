@@ -10,12 +10,14 @@ import {
   useDeleteDeviceMutation,
 } from "@/store/api/devices-api";
 import { computeMonthlyKwh } from "@/lib/types";
+import type { Device } from "@/lib/types";
 
 interface DeviceListProps {
   onAddClick: () => void;
+  onEdit: (device: Device) => void;
 }
 
-export function DeviceList({ onAddClick }: DeviceListProps) {
+export function DeviceList({ onAddClick, onEdit }: DeviceListProps) {
   const { data: devices = [], isLoading, error } = useGetDevicesQuery();
   const [toggleDevice] = useToggleDeviceMutation();
   const [deleteDevice] = useDeleteDeviceMutation();
@@ -88,6 +90,7 @@ export function DeviceList({ onAddClick }: DeviceListProps) {
               device={device}
               onToggle={(id, isActive) => toggleDevice({ id, isActive })}
               onDelete={(id) => deleteDevice(id)}
+              onEdit={onEdit}
             />
           ))}
         </div>

@@ -22,6 +22,7 @@ export const devices = pgTable("devices", {
   category: text("category").notNull(),
   ratedPowerW: integer("rated_power_w").notNull(),
   dailyHours: decimal("daily_hours", { precision: 4, scale: 1 }).notNull(),
+  imageUrl: text("image_url"),
   isActive: boolean("is_active").notNull().default(true),
   schedule: jsonb("schedule"),
   createdAt: timestamp("created_at", { withTimezone: true })

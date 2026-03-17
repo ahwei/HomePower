@@ -3,8 +3,15 @@ import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { History } from "lucide-react";
 import { ChatPanel } from "@/components/chat/chat-panel";
+import { createClient } from "@/lib/supabase/server";
 
-export default function ChatPage() {
+export default async function ChatPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
+
   return (
     <>
       <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
@@ -21,7 +28,7 @@ export default function ChatPage() {
           </Link>
         </div>
       </header>
-      <ChatPanel />
+      <ChatPanel avatarUrl={avatarUrl} />
     </>
   );
 }

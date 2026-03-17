@@ -37,9 +37,10 @@ const SUGGESTIONS = [
 interface ChatPanelProps {
   sessionId?: string;
   initialMessages?: Array<{ role: "user" | "assistant"; content: string }>;
+  avatarUrl?: string;
 }
 
-export function ChatPanel({ sessionId: initialSessionId, initialMessages }: ChatPanelProps) {
+export function ChatPanel({ sessionId: initialSessionId, initialMessages, avatarUrl }: ChatPanelProps) {
   const [input, setInput] = useState("");
   const sessionIdRef = useRef<string | undefined>(initialSessionId);
   const titleSetRef = useRef(!!initialSessionId);
@@ -123,7 +124,7 @@ export function ChatPanel({ sessionId: initialSessionId, initialMessages }: Chat
             </ConversationEmptyState>
           ) : (
             messages.map((message) => (
-              <ChatMessage key={message.id} message={message} />
+              <ChatMessage key={message.id} message={message} avatarUrl={avatarUrl} />
             ))
           )}
         </ConversationContent>

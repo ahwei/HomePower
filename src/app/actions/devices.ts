@@ -62,6 +62,13 @@ export async function toggleDevice(id: string, currentIsActive: boolean) {
 
 export async function deleteDevice(id: string) {
   const userId = await getUserId();
+
+  // Clean up storage image
+  const supabase = await createClient();
+  await supabase.storage
+    .from("device-images")
+    .remove([`${userId}/${id}.webp`]);
+
   return authDb(userId, (tx) =>
     tx
       .delete(devices)
@@ -76,17 +83,19 @@ export async function updateDevice(
     category: string;
     ratedPowerW: number;
     dailyHours: number;
+    imageUrl: string | null;
     schedule: { start: string; end: string } | null;
   }>
 ) {
   const userId = await getUserId();
-  const { schedule, dailyHours, ...rest } = data;
+  const { schedule, dailyHours, imageUrl, ...rest } = data;
   return authDb(userId, async (tx) => {
     const [row] = await tx
       .update(devices)
       .set({
         ...rest,
         ...(dailyHours !== undefined && { dailyHours: String(dailyHours) }),
+        ...(imageUrl !== undefined && { imageUrl }),
         ...(schedule !== undefined && { schedule }),
       })
       .where(and(eq(devices.id, id), eq(devices.userId, userId)))

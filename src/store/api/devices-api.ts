@@ -4,6 +4,7 @@ import {
   createDevice,
   toggleDevice as toggleDeviceAction,
   deleteDevice as deleteDeviceAction,
+  updateDevice as updateDeviceAction,
 } from "@/app/actions/devices";
 import type { Device } from "@/lib/types";
 
@@ -32,6 +33,7 @@ function mapRow(row: Awaited<ReturnType<typeof getDevices>>[number]): Device {
     category: row.category as Device["category"],
     ratedPowerW: row.ratedPowerW,
     dailyHours: Number(row.dailyHours),
+    imageUrl: row.imageUrl,
     isActive: row.isActive,
     schedule: row.schedule as Device["schedule"],
     createdAt:
@@ -120,6 +122,36 @@ export const devicesApi = createApi({
       },
       invalidatesTags: ["Devices"],
     }),
+
+    updateDevice: builder.mutation<
+      Device,
+      {
+        id: string;
+        data: Partial<{
+          name: string;
+          category: string;
+          ratedPowerW: number;
+          dailyHours: number;
+          imageUrl: string | null;
+          schedule: { start: string; end: string } | null;
+        }>;
+      }
+    >({
+      queryFn: async ({ id, data }) => {
+        try {
+          const row = await updateDeviceAction(id, data);
+          return { data: mapRow(row!) };
+        } catch (error) {
+          return {
+            error: {
+              status: "CUSTOM_ERROR" as const,
+              error: error instanceof Error ? error.message : "更新失敗",
+            },
+          };
+        }
+      },
+      invalidatesTags: ["Devices"],
+    }),
   }),
 });
 
@@ -128,4 +160,5 @@ export const {
   useAddDeviceMutation,
   useToggleDeviceMutation,
   useDeleteDeviceMutation,
+  useUpdateDeviceMutation,
 } = devicesApi;

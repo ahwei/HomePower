@@ -21,6 +21,7 @@ export interface Device {
   category: DeviceCategory;
   ratedPowerW: number;
   dailyHours: number;
+  imageUrl?: string | null;
   isActive: boolean;
   schedule?: DeviceSchedule;
   createdAt: string;
