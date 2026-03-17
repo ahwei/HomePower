@@ -164,6 +164,293 @@ graph TB
     style ProdTime fill:#fce4ec
 ```
 
+## 關鍵程式碼
+
+### Token 認證 — mcp-auth.ts（38 行）
+
+```typescript
+// src/lib/mcp-auth.ts
+import { createHash } from "crypto";
+import { eq, and, isNull } from "drizzle-orm";
+import { db } from "@/db";
+import { mcpTokens } from "@/db/schema";
+
+function hashToken(raw: string): string {
+  return createHash("sha256").update(raw).digest("hex");
+}
+
+/**
+ * 驗證 MCP Bearer token，回傳 userId 或 null
+ */
+export async function validateMcpToken(
+  rawToken: string
+): Promise<string | null> {
+  const hash = hashToken(rawToken);
+
+  const [token] = await db
+    .select()
+    .from(mcpTokens)
+    .where(
+      and(eq(mcpTokens.tokenHash, hash), isNull(mcpTokens.revokedAt))
+    );
+
+  if (!token) return null;
+
+  // 檢查過期
+  if (token.expiresAt && token.expiresAt < new Date()) return null;
+
+  // 更新 lastUsedAt（fire-and-forget）
+  db.update(mcpTokens)
+    .set({ lastUsedAt: new Date() })
+    .where(eq(mcpTokens.id, token.id))
+    .then(() => {});
+
+  return token.userId;
+}
+```
+
+### MCP Server 工廠 + 認證入口
+
+```typescript
+// src/app/api/mcp/route.ts — Helpers & Factory
+
+function extractBearerToken(request: Request): string | null {
+  const auth = request.headers.get("authorization");
+  if (!auth?.startsWith("Bearer ")) return null;
+  return auth.slice(7);
+}
+
+async function authenticateRequest(
+  request: Request
+): Promise<Response | string> {
+  const token = extractBearerToken(request);
+  if (!token) return jsonResponse({ error: "未提供 API 權杖" }, 401);
+
+  const userId = await validateMcpToken(token);
+  if (!userId)
+    return jsonResponse({ error: "無效或已過期的 API 權杖" }, 401);
+
+  return userId;
+}
+
+function createMcpServer(userId: string): McpServer {
+  const server = new McpServer({
+    name: "homepower",
+    version: "1.0.0",
+  });
+
+  registerTools(server, userId);
+  registerResources(server, userId);
+  registerPrompts(server);
+
+  return server;
+}
+```
+
+### registerTools() — 6 個 MCP Tools（節錄代表性 tool）
+
+```typescript
+// src/app/api/mcp/route.ts — registerTools
+
+function registerTools(server: McpServer, userId: string) {
+  const withRls = <T>(fn: (tx: typeof db) => Promise<T>) =>
+    authDb(userId, fn);
+
+  // Tool 1: 查詢設備
+  server.registerTool("get_devices", { description: "查詢使用者的所有家電設備" }, () =>
+    withRls(async (tx) => {
+      const rows = await tx
+        .select()
+        .from(devices)
+        .where(eq(devices.userId, userId))
+        .orderBy(desc(devices.createdAt));
+
+      return textResult(
+        rows.map((d) => ({
+          name: d.name,
+          category: CATEGORY_LABELS[d.category] ?? d.category,
+          ratedPowerW: d.ratedPowerW,
+          dailyHours: Number(d.dailyHours),
+          isActive: d.isActive,
+          monthlyKwh: Math.round(
+            (d.ratedPowerW * Number(d.dailyHours) * 30) / 1000
+          ),
+        }))
+      );
+    })
+  );
+
+  // Tool 3: 電費計算（帶 Zod inputSchema）
+  server.registerTool(
+    "calculate_bill",
+    {
+      description: "根據用電量計算電費。支援住宅累進制、時間電價二段式、三段式",
+      inputSchema: z.object({
+        kwh: z.number().describe("總用電量 kWh"),
+        planType: z
+          .enum(["residential", "time_of_use_2", "time_of_use_3"])
+          .default("residential")
+          .describe("電價方案"),
+        month: z
+          .number()
+          .min(1)
+          .max(12)
+          .optional()
+          .describe("月份（判斷夏月），不填預設當月"),
+      }),
+    },
+    async ({ kwh, planType, month }) => {
+      const isSummer = isSummerMonth(month);
+      const result = calculateBill({
+        kwh,
+        planType: planType as PlanType,
+        isSummer,
+        peakKwh: Math.round(kwh * 0.6),
+        offPeakKwh: Math.round(kwh * 0.4),
+        midPeakKwh: Math.round(kwh * 0.25),
+      });
+
+      return textResult({
+        ...result,
+        isSummer,
+        note: isSummer ? "夏月費率（6-9月）" : "非夏月費率",
+      });
+    }
+  );
+
+  // ... 還有 get_device_summary, get_usage_by_date_range,
+  //     get_monthly_usage_summary, get_energy_saving_tips
+}
+```
+
+### registerResources() — 2 個外部資料源
+
+```typescript
+// src/app/api/mcp/route.ts — registerResources
+
+function registerResources(server: McpServer, userId: string) {
+  const withRls = <T>(fn: (tx: typeof db) => Promise<T>) =>
+    authDb(userId, fn);
+
+  // Resource 1: 台電即時供電
+  server.registerResource(
+    "grid-status",
+    "homepower://grid-status",
+    {
+      description: "台灣電力系統即時供電狀態（台電資料）",
+      mimeType: "application/json",
+    },
+    async () => {
+      const data = await fetchGridStatus();
+      return resourceResult("homepower://grid-status", data);
+    }
+  );
+
+  // Resource 2: 天氣預報
+  server.registerResource(
+    "weather-forecast",
+    "homepower://weather-forecast",
+    {
+      description: "7 天天氣預報與冷氣預估使用時數（中央氣象署資料）",
+      mimeType: "application/json",
+    },
+    async () => {
+      const settings = await withRls(async (tx) => {
+        const [row] = await tx
+          .select()
+          .from(userSettings)
+          .where(eq(userSettings.userId, userId));
+        return row;
+      });
+
+      const location = settings?.location
+        ? `${settings.location}市`
+        : "高雄市";
+      const data = await fetchWeatherForecast(location);
+      return resourceResult("homepower://weather-forecast", data);
+    }
+  );
+}
+```
+
+### registerPrompts() — 3 個提示模板（節錄）
+
+```typescript
+// src/app/api/mcp/route.ts — registerPrompts
+
+function registerPrompts(server: McpServer) {
+  server.registerPrompt(
+    "analyze-monthly",
+    {
+      description: "分析指定月份的用電狀況並提供建議",
+      argsSchema: {
+        year: z.string().describe("年份，例如 2026"),
+        month: z.string().describe("月份 1-12"),
+      },
+    },
+    async ({ year, month }) => ({
+      messages: [
+        {
+          role: "user" as const,
+          content: {
+            type: "text" as const,
+            text: `請分析我 ${year} 年 ${month} 月的用電狀況。
+
+請使用以下工具取得資料：
+1. get_monthly_usage_summary — 取得月度用電摘要
+2. get_device_summary — 取得設備統計
+3. calculate_bill — 用總 kWh 試算電費
+
+然後請提供：
+- 用電概覽（總量、日均、碳排）
+- 各設備用電排名分析
+- 與前月比較的趨勢（如有資料）
+- 具體的節電建議`,
+          },
+        },
+      ],
+    })
+  );
+
+  // ... saving-tips, compare-regions
+}
+```
+
+### Route Handler — 無狀態 HTTP 入口
+
+```typescript
+// src/app/api/mcp/route.ts — Route Handlers
+
+async function handleMcpRequest(request: Request): Promise<Response> {
+  const result = await authenticateRequest(request);
+  if (result instanceof Response) return result;
+
+  const server = createMcpServer(result);
+  const transport = new WebStandardStreamableHTTPServerTransport({
+    sessionIdGenerator: undefined, // stateless
+  });
+  await server.connect(transport);
+
+  const body = await request.clone().text();
+  const response = await transport.handleRequest(request, {
+    parsedBody: body ? JSON.parse(body) : undefined,
+  });
+  return response;
+}
+
+export async function POST(request: Request) {
+  return handleMcpRequest(request);
+}
+
+export async function GET() {
+  return new Response(null, { status: 405 }); // 無狀態不支援 SSE
+}
+
+export async function DELETE() {
+  return new Response(null, { status: 405 });
+}
+```
+
 ## 檔案結構對照
 
 ```
