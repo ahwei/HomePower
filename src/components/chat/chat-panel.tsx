@@ -23,7 +23,7 @@ import { ChatMessage } from "./chat-message";
 import {
   createChatSession,
   updateSessionTitle,
-} from "@/app/actions/chat";
+} from "@/actions/chat";
 
 const SUGGESTIONS = [
   "我有幾台設備？每月總共用多少電？",

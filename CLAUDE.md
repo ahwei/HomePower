@@ -48,7 +48,7 @@ Next.js 16 uses `src/proxy.ts` (not `middleware.ts`). It handles:
 `src/app/api/mcp/route.ts` — Streamable HTTP transport, stateless mode (no SSE):
 - Bearer token auth via `src/lib/mcp-auth.ts` (SHA-256 hashed tokens in `mcp_tokens` table)
 - 6 tools, 2 resources, 3 prompts — registered via `createMcpServer(userId)`
-- Token CRUD via Server Actions in `src/app/actions/tokens.ts`
+- Token CRUD via Server Actions in `src/actions/tokens.ts`
 - Token management UI at `/settings/tokens`
 - Shared fetch/parse logic in `src/lib/grid-status.ts` and `src/lib/weather.ts`
 
@@ -71,6 +71,7 @@ Next.js 16 uses `src/proxy.ts` (not `middleware.ts`). It handles:
 
 ```
 src/
+├── actions/           # Server Actions (chat, devices, tokens, usage-logs)
 ├── app/               # Next.js App Router pages + API routes
 ├── components/
 │   ├── ui/            # shadcn/ui base components
@@ -103,7 +104,7 @@ src/
 - `src/components/app-sidebar.tsx` — Navigation + user dropdown
 - `src/db/schema.ts` — Drizzle ORM schema (devices, usage_logs, user_settings, mcp_tokens)
 - `src/db/index.ts` — Drizzle DB singleton (`db`) + RLS-enforced wrapper (`authDb`). Use `authDb(userId, fn)` for user-scoped queries; `db` is reserved for admin-level operations (e.g. token validation in `mcp-auth.ts`)
-- `src/app/actions/devices.ts` — Server Actions for device CRUD (includes storage cleanup on delete)
+- `src/actions/devices.ts` — Server Actions for device CRUD (includes storage cleanup on delete)
 - `src/lib/upload-image.ts` — Image compression + Supabase Storage upload utilities
 - `src/lib/utils.ts` — `cn()` helper (clsx + tailwind-merge)
 - `components.json` — shadcn/ui configuration

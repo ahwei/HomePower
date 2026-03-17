@@ -3,7 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Zap, Calendar, TrendingDown } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { UsageLogsSummary } from "@/app/actions/usage-logs";
+import type { UsageLogsSummary } from "@/actions/usage-logs";
 
 const CO2_FACTOR = 0.494; // kg CO2 / kWh
 
