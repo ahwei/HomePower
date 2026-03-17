@@ -34,12 +34,19 @@ export interface UsageLogRow {
   kwh: number;
 }
 
+export interface UsageLogsSummary {
+  totalKwh: number;
+  avgDailyKwh: number;
+  days: number;
+}
+
 export interface UsageLogsResult {
   rows: UsageLogRow[];
   total: number;
   page: number;
   pageSize: number;
   totalPages: number;
+  summary: UsageLogsSummary;
 }
 
 export async function getUsageLogs(
@@ -65,9 +72,17 @@ export async function getUsageLogs(
 
     const where = and(...conditions);
 
-    // Count total
+    // Count total + summary stats
     const [{ count }] = await tx
       .select({ count: sql<number>`count(*)::int` })
+      .from(usageLogs)
+      .where(where);
+
+    const [stats] = await tx
+      .select({
+        totalKwh: sql<string>`coalesce(sum(${usageLogs.kwh}), 0)::numeric(10,2)`,
+        days: sql<number>`count(distinct ${usageLogs.date})::int`,
+      })
       .from(usageLogs)
       .where(where);
 
@@ -92,6 +107,9 @@ export async function getUsageLogs(
       .limit(pageSize)
       .offset((page - 1) * pageSize);
 
+    const totalKwh = Number(stats.totalKwh);
+    const days = stats.days || 1;
+
     return {
       rows: rows.map((r) => ({
         id: r.id,
@@ -108,6 +126,11 @@ export async function getUsageLogs(
       page,
       pageSize,
       totalPages: Math.ceil(count / pageSize),
+      summary: {
+        totalKwh: Math.round(totalKwh * 100) / 100,
+        avgDailyKwh: Math.round((totalKwh / days) * 100) / 100,
+        days,
+      },
     };
   });
 }

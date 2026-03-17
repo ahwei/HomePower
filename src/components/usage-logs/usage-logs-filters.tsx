@@ -38,6 +38,14 @@ export function UsageLogsFilters({
     onChange({ ...filters, ...partial });
   }
 
+  const deviceLabel =
+    filters.deviceId === "all"
+      ? "全部設備"
+      : deviceOptions.find((d) => d.id === filters.deviceId)?.name ?? "全部設備";
+
+  const sortByLabel = filters.sortBy === "kwh" ? "用電量" : "日期";
+  const sortOrderLabel = filters.sortOrder === "asc" ? "舊→新" : "新→舊";
+
   return (
     <div className="flex flex-wrap items-end gap-4">
       <div className="flex flex-col gap-1.5">
@@ -67,12 +75,12 @@ export function UsageLogsFilters({
           onValueChange={(v) => update({ deviceId: v ?? "all" })}
         >
           <SelectTrigger className="w-44">
-            <SelectValue placeholder="全部設備" />
+            {deviceLabel}
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all" label="全部設備">全部設備</SelectItem>
+            <SelectItem value="all">全部設備</SelectItem>
             {deviceOptions.map((d) => (
-              <SelectItem key={d.id} value={d.id} label={d.name}>
+              <SelectItem key={d.id} value={d.id}>
                 {d.name}
               </SelectItem>
             ))}
@@ -86,11 +94,11 @@ export function UsageLogsFilters({
           onValueChange={(v) => v && update({ sortBy: v as FilterValues["sortBy"] })}
         >
           <SelectTrigger className="w-32">
-            <SelectValue />
+            {sortByLabel}
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="date" label="日期">日期</SelectItem>
-            <SelectItem value="kwh" label="用電量">用電量</SelectItem>
+            <SelectItem value="date">日期</SelectItem>
+            <SelectItem value="kwh">用電量</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -103,11 +111,11 @@ export function UsageLogsFilters({
           }
         >
           <SelectTrigger className="w-28">
-            <SelectValue />
+            {sortOrderLabel}
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="desc" label="新→舊">新→舊</SelectItem>
-            <SelectItem value="asc" label="舊→新">舊→新</SelectItem>
+            <SelectItem value="desc">新→舊</SelectItem>
+            <SelectItem value="asc">舊→新</SelectItem>
           </SelectContent>
         </Select>
       </div>

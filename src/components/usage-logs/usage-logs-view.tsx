@@ -5,6 +5,7 @@ import { useGetUsageLogsQuery } from "@/store/api/usage-logs-api";
 import { UsageLogsFilters, type FilterValues } from "./usage-logs-filters";
 import { UsageLogsTable } from "./usage-logs-table";
 import { UsageLogsPagination } from "./usage-logs-pagination";
+import { UsageLogsSummaryCards } from "./usage-logs-summary";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
@@ -73,6 +74,8 @@ export function UsageLogsView() {
           />
         </CardContent>
       </Card>
+
+      <UsageLogsSummaryCards summary={data?.summary} isLoading={isLoading} />
 
       {error ? (
         <Alert variant="destructive">
