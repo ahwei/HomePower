@@ -2,6 +2,9 @@ import { createApi, fakeBaseQuery } from "@reduxjs/toolkit/query/react";
 import {
   getUsageLogs,
   getDevicesForFilter,
+  getWeeklyUsageTrend,
+  getMonthlyUsageTrend,
+  getCategoryUsage,
   type UsageLogFilters,
   type UsageLogsResult,
 } from "@/app/actions/usage-logs";
@@ -63,8 +66,70 @@ export const usageLogsApi = createApi({
         }
       },
     }),
+
+    getWeeklyTrend: builder.query<
+      { date: string; kwh: number }[],
+      void
+    >({
+      queryFn: async () => {
+        try {
+          const rows = await withRetry(() => getWeeklyUsageTrend());
+          return { data: rows };
+        } catch (error) {
+          return {
+            error: {
+              status: "CUSTOM_ERROR" as const,
+              error: error instanceof Error ? error.message : "讀取週趨勢失敗",
+            },
+          };
+        }
+      },
+    }),
+
+    getMonthlyTrend: builder.query<
+      { month: string; kwh: number }[],
+      void
+    >({
+      queryFn: async () => {
+        try {
+          const rows = await withRetry(() => getMonthlyUsageTrend());
+          return { data: rows };
+        } catch (error) {
+          return {
+            error: {
+              status: "CUSTOM_ERROR" as const,
+              error: error instanceof Error ? error.message : "讀取月趨勢失敗",
+            },
+          };
+        }
+      },
+    }),
+
+    getCategoryUsage: builder.query<
+      { category: string; deviceName: string; kwh: number }[],
+      void
+    >({
+      queryFn: async () => {
+        try {
+          const rows = await withRetry(() => getCategoryUsage());
+          return { data: rows };
+        } catch (error) {
+          return {
+            error: {
+              status: "CUSTOM_ERROR" as const,
+              error: error instanceof Error ? error.message : "讀取分類用電失敗",
+            },
+          };
+        }
+      },
+    }),
   }),
 });
 
-export const { useGetUsageLogsQuery, useGetDevicesForFilterQuery } =
-  usageLogsApi;
+export const {
+  useGetUsageLogsQuery,
+  useGetDevicesForFilterQuery,
+  useGetWeeklyTrendQuery,
+  useGetMonthlyTrendQuery,
+  useGetCategoryUsageQuery,
+} = usageLogsApi;

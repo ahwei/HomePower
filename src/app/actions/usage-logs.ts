@@ -135,6 +135,105 @@ export async function getUsageLogs(
   });
 }
 
+/** 取得最近 7 天每日用電量（Dashboard 用） */
+export async function getWeeklyUsageTrend() {
+  const userId = await getUserId();
+  return authDb(userId, async (tx) => {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 6);
+
+    const rows = await tx
+      .select({
+        date: usageLogs.date,
+        totalKwh: sql<string>`sum(${usageLogs.kwh})::numeric(10,2)`,
+      })
+      .from(usageLogs)
+      .where(
+        and(
+          eq(usageLogs.userId, userId),
+          gte(usageLogs.date, startDate),
+          lte(usageLogs.date, endDate)
+        )
+      )
+      .groupBy(usageLogs.date)
+      .orderBy(asc(usageLogs.date));
+
+    return rows.map((r) => ({
+      date:
+        r.date instanceof Date
+          ? r.date.toISOString().slice(0, 10)
+          : String(r.date),
+      kwh: Number(r.totalKwh),
+    }));
+  });
+}
+
+/** 取得最近 12 個月每月用電量（Dashboard 用） */
+export async function getMonthlyUsageTrend() {
+  const userId = await getUserId();
+  return authDb(userId, async (tx) => {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - 11);
+    startDate.setDate(1);
+
+    const rows = await tx
+      .select({
+        month: sql<string>`to_char(${usageLogs.date}, 'YYYY-MM')`,
+        totalKwh: sql<string>`sum(${usageLogs.kwh})::numeric(10,1)`,
+      })
+      .from(usageLogs)
+      .where(
+        and(
+          eq(usageLogs.userId, userId),
+          gte(usageLogs.date, startDate),
+          lte(usageLogs.date, endDate)
+        )
+      )
+      .groupBy(sql`to_char(${usageLogs.date}, 'YYYY-MM')`)
+      .orderBy(asc(sql`to_char(${usageLogs.date}, 'YYYY-MM')`));
+
+    return rows.map((r) => ({
+      month: r.month,
+      kwh: Number(r.totalKwh),
+    }));
+  });
+}
+
+/** 取得各設備類別的實際用電量（Dashboard 用） */
+export async function getCategoryUsage() {
+  const userId = await getUserId();
+  return authDb(userId, async (tx) => {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const rows = await tx
+      .select({
+        category: devices.category,
+        deviceName: devices.name,
+        totalKwh: sql<string>`sum(${usageLogs.kwh})::numeric(10,2)`,
+      })
+      .from(usageLogs)
+      .innerJoin(devices, eq(usageLogs.deviceId, devices.id))
+      .where(
+        and(
+          eq(usageLogs.userId, userId),
+          gte(usageLogs.date, startOfMonth),
+          lte(usageLogs.date, now)
+        )
+      )
+      .groupBy(devices.category, devices.name)
+      .orderBy(desc(sql`sum(${usageLogs.kwh})`));
+
+    return rows.map((r) => ({
+      category: r.category,
+      deviceName: r.deviceName,
+      kwh: Number(r.totalKwh),
+    }));
+  });
+}
+
 /** 取得使用者所有設備（用於 filter dropdown） */
 export async function getDevicesForFilter() {
   const userId = await getUserId();

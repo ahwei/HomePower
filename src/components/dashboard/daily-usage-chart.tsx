@@ -96,13 +96,11 @@ export function DailyUsageChart() {
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis
                 dataKey="label"
-                tick={{ fontSize: 11 }}
+                tick={{ fontSize: 11, fill: "#a1a1aa" }}
                 interval={3}
-                className="text-muted-foreground"
               />
               <YAxis
-                tick={{ fontSize: 11 }}
-                className="text-muted-foreground"
+                tick={{ fontSize: 11, fill: "#a1a1aa" }}
                 unit=" kWh"
               />
               <Tooltip
@@ -130,8 +128,8 @@ export function DailyUsageChart() {
               <Area
                 type="monotone"
                 dataKey="kwh"
-                stroke="hsl(var(--primary))"
-                fill="hsl(var(--primary))"
+                stroke="#34d399"
+                fill="#34d399"
                 fillOpacity={0.15}
                 strokeWidth={2}
               />
