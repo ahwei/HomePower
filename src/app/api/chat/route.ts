@@ -46,51 +46,45 @@ export async function POST(req: Request) {
     model: openai(process.env.OPENAI_MODEL ?? DEFAULT_OPENAI_MODEL),
     system: getSystemPrompt(),
     messages: await convertToModelMessages(messages),
-    tools: createTools(user.id),
+    tools: createTools(supabase, user.id),
     stopWhen: stepCountIs(5),
     async onFinish({ text }) {
       if (!sessionId) return;
 
       try {
-        const { authDb } = await import("@/db");
-        const { chatMessages, chatSessions } = await import("@/db/schema");
-        const { eq } = await import("drizzle-orm");
-
-        await authDb(user.id, async (tx) => {
-          // 存 user 最後一則訊息
-          const lastUserMsg = messages.filter((m) => m.role === "user").pop();
-          if (lastUserMsg) {
-            const userText =
-              lastUserMsg.parts
-                ?.filter(
-                  (p): p is { type: "text"; text: string } => p.type === "text",
-                )
-                .map((p) => p.text)
-                .join("") ?? "";
-            if (userText) {
-              await tx.insert(chatMessages).values({
-                sessionId,
-                role: "user",
-                content: userText,
-              });
-            }
-          }
-
-          // 存 assistant 回覆（即使 text 為空也存 tool 回應的結果）
-          if (text) {
-            await tx.insert(chatMessages).values({
-              sessionId,
-              role: "assistant",
-              content: text,
+        // 存 user 最後一則訊息
+        const lastUserMsg = messages.filter((m) => m.role === "user").pop();
+        if (lastUserMsg) {
+          const userText =
+            lastUserMsg.parts
+              ?.filter(
+                (p): p is { type: "text"; text: string } => p.type === "text",
+              )
+              .map((p) => p.text)
+              .join("") ?? "";
+          if (userText) {
+            await supabase.from("chat_messages").insert({
+              session_id: sessionId,
+              role: "user",
+              content: userText,
             });
           }
+        }
 
-          // 更新 session updatedAt
-          await tx
-            .update(chatSessions)
-            .set({ updatedAt: new Date() })
-            .where(eq(chatSessions.id, sessionId));
-        });
+        // 存 assistant 回覆
+        if (text) {
+          await supabase.from("chat_messages").insert({
+            session_id: sessionId,
+            role: "assistant",
+            content: text,
+          });
+        }
+
+        // 更新 session updatedAt
+        await supabase
+          .from("chat_sessions")
+          .update({ updated_at: new Date().toISOString() })
+          .eq("id", sessionId);
       } catch (error) {
         console.error("Failed to save chat messages:", error);
       }
