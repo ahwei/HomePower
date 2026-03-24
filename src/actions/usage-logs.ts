@@ -20,8 +20,6 @@ async function getUserId() {
   return { userId: user.id, supabase };
 }
 
-export type { UsageLogFilters, UsageLogsResult };
-export type { UsageLogRow, UsageLogsSummary } from "@/queries/usage-logs";
 
 export async function getUsageLogs(
   filters: UsageLogFilters = {}

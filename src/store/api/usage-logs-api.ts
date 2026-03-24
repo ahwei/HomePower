@@ -5,9 +5,8 @@ import {
   getWeeklyUsageTrend,
   getMonthlyUsageTrend,
   getCategoryUsage,
-  type UsageLogFilters,
-  type UsageLogsResult,
 } from "@/actions/usage-logs";
+import type { UsageLogFilters, UsageLogsResult } from "@/queries/usage-logs";
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1500;
