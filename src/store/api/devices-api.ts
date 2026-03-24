@@ -32,18 +32,12 @@ function mapRow(row: Awaited<ReturnType<typeof getDevices>>[number]): Device {
     name: row.name,
     category: row.category as Device["category"],
     ratedPowerW: row.ratedPowerW,
-    dailyHours: Number(row.dailyHours),
+    dailyHours: row.dailyHours,
     imageUrl: row.imageUrl,
     isActive: row.isActive,
     schedule: row.schedule as Device["schedule"],
-    createdAt:
-      row.createdAt instanceof Date
-        ? row.createdAt.toISOString()
-        : String(row.createdAt),
-    updatedAt:
-      row.updatedAt instanceof Date
-        ? row.updatedAt.toISOString()
-        : String(row.updatedAt),
+    createdAt: String(row.createdAt),
+    updatedAt: String(row.updatedAt),
   };
 }
 

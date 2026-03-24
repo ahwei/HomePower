@@ -26,12 +26,23 @@ vi.mock("@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js", () => {
   };
 });
 
-// Mock DB and dependencies
-vi.mock("@/db", () => ({ db: {} }));
-vi.mock("@/db/schema", () => ({
-  devices: {},
-  usageLogs: {},
-  userSettings: {},
+// Mock Supabase service client
+vi.mock("@/lib/supabase/service", () => ({
+  createServiceClient: () => ({ from: vi.fn() }),
+}));
+
+// Mock shared query modules
+vi.mock("@/lib/queries/devices", () => ({
+  queryDevicesForTool: vi.fn(),
+  queryDeviceSummary: vi.fn(),
+  queryEnergySavingTips: vi.fn(),
+}));
+vi.mock("@/lib/queries/usage-logs", () => ({
+  queryUsageByDateRange: vi.fn(),
+  queryMonthlyUsageSummary: vi.fn(),
+}));
+vi.mock("@/lib/queries/user-settings", () => ({
+  queryGetUserSettings: vi.fn(),
 }));
 vi.mock("@/components/billing/calculate-bill", () => ({
   calculateBill: vi.fn(),
@@ -41,7 +52,7 @@ vi.mock("@/constants/electricity-plans", () => ({
 }));
 vi.mock("@/constants/device-presets", () => ({
   CATEGORY_LABELS: {},
-  CO2_FACTOR_KG_PER_KWH: 0.509,
+  CO2_FACTOR_KG_PER_KWH: 0.494,
 }));
 vi.mock("@/lib/grid-status", () => ({
   fetchGridStatus: vi.fn(),

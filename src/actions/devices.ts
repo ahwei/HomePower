@@ -1,29 +1,20 @@
 "use server";
 
-import { eq, and, desc } from "drizzle-orm";
-import { authDb } from "@/db";
-import { devices } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
+import { queryDevices } from "@/lib/queries/devices";
 
-/** 取得當前登入 user ID */
-async function getUserId(): Promise<string> {
+async function getUserId() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("未登入");
-  return user.id;
+  return { userId: user.id, supabase };
 }
 
 export async function getDevices() {
-  const userId = await getUserId();
-  return authDb(userId, (tx) =>
-    tx
-      .select()
-      .from(devices)
-      .where(eq(devices.userId, userId))
-      .orderBy(desc(devices.createdAt))
-  );
+  const { userId, supabase } = await getUserId();
+  return queryDevices(supabase, userId);
 }
 
 export async function createDevice(data: {
@@ -32,48 +23,64 @@ export async function createDevice(data: {
   ratedPowerW: number;
   dailyHours: number;
 }) {
-  const userId = await getUserId();
-  return authDb(userId, async (tx) => {
-    const [row] = await tx
-      .insert(devices)
-      .values({
-        userId,
-        name: data.name,
-        category: data.category,
-        ratedPowerW: data.ratedPowerW,
-        dailyHours: String(data.dailyHours),
-      })
-      .returning();
-    return row;
-  });
+  const { userId, supabase } = await getUserId();
+  const { data: row, error } = await supabase
+    .from("devices")
+    .insert({
+      user_id: userId,
+      name: data.name,
+      category: data.category,
+      rated_power_w: data.ratedPowerW,
+      daily_hours: String(data.dailyHours),
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return {
+    id: row.id,
+    userId: row.user_id,
+    name: row.name,
+    category: row.category,
+    ratedPowerW: row.rated_power_w,
+    dailyHours: Number(row.daily_hours),
+    imageUrl: row.image_url,
+    isActive: row.is_active,
+    schedule: row.schedule as { start: string; end: string } | null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
 }
 
 export async function toggleDevice(id: string, currentIsActive: boolean) {
-  const userId = await getUserId();
-  return authDb(userId, async (tx) => {
-    const [row] = await tx
-      .update(devices)
-      .set({ isActive: !currentIsActive })
-      .where(and(eq(devices.id, id), eq(devices.userId, userId)))
-      .returning();
-    return row;
-  });
+  const { userId, supabase } = await getUserId();
+  const { data: row, error } = await supabase
+    .from("devices")
+    .update({ is_active: !currentIsActive })
+    .eq("id", id)
+    .eq("user_id", userId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return row;
 }
 
 export async function deleteDevice(id: string) {
-  const userId = await getUserId();
+  const { userId, supabase } = await getUserId();
 
   // Clean up storage image
-  const supabase = await createClient();
   await supabase.storage
     .from("device-images")
     .remove([`${userId}/${id}.webp`]);
 
-  return authDb(userId, (tx) =>
-    tx
-      .delete(devices)
-      .where(and(eq(devices.id, id), eq(devices.userId, userId)))
-  );
+  const { error } = await supabase
+    .from("devices")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", userId);
+
+  if (error) throw error;
 }
 
 export async function updateDevice(
@@ -87,19 +94,37 @@ export async function updateDevice(
     schedule: { start: string; end: string } | null;
   }>
 ) {
-  const userId = await getUserId();
-  const { schedule, dailyHours, imageUrl, ...rest } = data;
-  return authDb(userId, async (tx) => {
-    const [row] = await tx
-      .update(devices)
-      .set({
-        ...rest,
-        ...(dailyHours !== undefined && { dailyHours: String(dailyHours) }),
-        ...(imageUrl !== undefined && { imageUrl }),
-        ...(schedule !== undefined && { schedule }),
-      })
-      .where(and(eq(devices.id, id), eq(devices.userId, userId)))
-      .returning();
-    return row;
-  });
+  const { userId, supabase } = await getUserId();
+  const { schedule, dailyHours, imageUrl, ratedPowerW, ...rest } = data;
+
+  const updateData: Record<string, unknown> = {};
+  if (rest.name !== undefined) updateData.name = rest.name;
+  if (rest.category !== undefined) updateData.category = rest.category;
+  if (ratedPowerW !== undefined) updateData.rated_power_w = ratedPowerW;
+  if (dailyHours !== undefined) updateData.daily_hours = String(dailyHours);
+  if (imageUrl !== undefined) updateData.image_url = imageUrl;
+  if (schedule !== undefined) updateData.schedule = schedule;
+
+  const { data: row, error } = await supabase
+    .from("devices")
+    .update(updateData)
+    .eq("id", id)
+    .eq("user_id", userId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return {
+    id: row.id,
+    userId: row.user_id,
+    name: row.name,
+    category: row.category,
+    ratedPowerW: row.rated_power_w,
+    dailyHours: Number(row.daily_hours),
+    imageUrl: row.image_url,
+    isActive: row.is_active,
+    schedule: row.schedule as { start: string; end: string } | null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
 }
