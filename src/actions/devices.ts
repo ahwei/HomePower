@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { queryDevices } from "@/queries/devices";
+import { queryDevices } from "@/lib/queries/devices";
 
 async function getUserId() {
   const supabase = await createClient();

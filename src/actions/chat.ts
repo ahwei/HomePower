@@ -8,7 +8,7 @@ import {
   queryGetChatMessages,
   queryGetChatSessions,
   queryDeleteChatSession,
-} from "@/queries/chat";
+} from "@/lib/queries/chat";
 
 async function getUserId() {
   const supabase = await createClient();

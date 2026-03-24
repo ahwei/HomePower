@@ -32,16 +32,16 @@ vi.mock("@/lib/supabase/service", () => ({
 }));
 
 // Mock shared query modules
-vi.mock("@/queries/devices", () => ({
+vi.mock("@/lib/queries/devices", () => ({
   queryDevicesForTool: vi.fn(),
   queryDeviceSummary: vi.fn(),
   queryEnergySavingTips: vi.fn(),
 }));
-vi.mock("@/queries/usage-logs", () => ({
+vi.mock("@/lib/queries/usage-logs", () => ({
   queryUsageByDateRange: vi.fn(),
   queryMonthlyUsageSummary: vi.fn(),
 }));
-vi.mock("@/queries/user-settings", () => ({
+vi.mock("@/lib/queries/user-settings", () => ({
   queryGetUserSettings: vi.fn(),
 }));
 vi.mock("@/components/billing/calculate-bill", () => ({

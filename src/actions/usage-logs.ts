@@ -8,8 +8,8 @@ import {
   queryCategoryUsage,
   type UsageLogFilters,
   type UsageLogsResult,
-} from "@/queries/usage-logs";
-import { queryDevicesForFilter } from "@/queries/devices";
+} from "@/lib/queries/usage-logs";
+import { queryDevicesForFilter } from "@/lib/queries/devices";
 
 async function getUserId() {
   const supabase = await createClient();

@@ -3,9 +3,9 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import { z } from "zod/v4";
 import { createServiceClient } from "@/lib/supabase/service";
 import { validateMcpToken } from "@/lib/mcp-auth";
-import { queryDevicesForTool, queryDeviceSummary, queryEnergySavingTips } from "@/queries/devices";
-import { queryUsageByDateRange, queryMonthlyUsageSummary } from "@/queries/usage-logs";
-import { queryGetUserSettings } from "@/queries/user-settings";
+import { queryDevicesForTool, queryDeviceSummary, queryEnergySavingTips } from "@/lib/queries/devices";
+import { queryUsageByDateRange, queryMonthlyUsageSummary } from "@/lib/queries/usage-logs";
+import { queryGetUserSettings } from "@/lib/queries/user-settings";
 import { calculateBill } from "@/components/billing/calculate-bill";
 import { isSummerMonth } from "@/constants/electricity-plans";
 import { fetchGridStatus } from "@/lib/grid-status";

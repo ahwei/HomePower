@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import type { UsageLogRow } from "@/queries/usage-logs";
+import type { UsageLogRow } from "@/lib/queries/usage-logs";
 
 interface UsageLogsTableProps {
   rows: UsageLogRow[];

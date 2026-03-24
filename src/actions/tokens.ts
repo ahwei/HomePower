@@ -6,7 +6,7 @@ import {
   queryCreateToken,
   queryRevokeToken,
   queryGetTokens,
-} from "@/queries/tokens";
+} from "@/lib/queries/tokens";
 
 async function getUserId() {
   const supabase = await createClient();

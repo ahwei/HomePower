@@ -63,15 +63,15 @@ Query patterns:
 - **RPC functions** defined in `supabase/migrations/20260324_rpc_functions.sql`
 - **Database types** in `src/lib/supabase/database.types.ts` (typed `SupabaseClient<Database>`)
 
-### Shared Query Modules (`src/queries/`)
+### Shared Query Modules (`src/lib/queries/`)
 
 MCP tools and Chat tools share the same query functions to avoid duplication:
 
-- `src/queries/devices.ts` — Device queries + tool helpers (summary, tips)
-- `src/queries/usage-logs.ts` — Usage log RPC wrappers
-- `src/queries/chat.ts` — Chat session/message CRUD
-- `src/queries/tokens.ts` — MCP token CRUD + validation
-- `src/queries/user-settings.ts` — User settings query
+- `src/lib/queries/devices.ts` — Device queries + tool helpers (summary, tips)
+- `src/lib/queries/usage-logs.ts` — Usage log RPC wrappers
+- `src/lib/queries/chat.ts` — Chat session/message CRUD
+- `src/lib/queries/tokens.ts` — MCP token CRUD + validation
+- `src/lib/queries/user-settings.ts` — User settings query
 
 Each function takes `(supabase, userId, ...)` and handles snake_case → camelCase mapping.
 
@@ -102,10 +102,9 @@ src/
 │   ├── dashboard/     # Dashboard feature components
 │   └── billing/       # Billing feature components
 ├── constants/         # App constants (device presets, electricity plans)
-├── queries/           # Shared query modules (Supabase PostgREST + RPC)
 ├── hooks/             # Shared React hooks (use-store, use-grid-status, etc.)
 ├── store/             # Redux Toolkit store, slices, provider
-└── lib/               # Utilities (cn, types, supabase clients)
+└── lib/               # Utilities (cn, types, supabase clients, queries)
 ```
 
 ### Component Patterns
@@ -128,8 +127,8 @@ src/
 - `src/components/app-sidebar.tsx` — Navigation + user dropdown
 - `src/lib/supabase/database.types.ts` — Supabase Database type definitions
 - `src/lib/supabase/service.ts` — Service role client (MCP, token validation)
-- `src/queries/devices.ts` — Shared device queries (used by actions, chat tools, MCP tools)
-- `src/queries/usage-logs.ts` — Usage log RPC wrappers
+- `src/lib/queries/devices.ts` — Shared device queries (used by actions, chat tools, MCP tools)
+- `src/lib/queries/usage-logs.ts` — Usage log RPC wrappers
 - `supabase/migrations/20260324_rpc_functions.sql` — PostgreSQL RPC functions for aggregations
 - `src/actions/devices.ts` — Server Actions for device CRUD (includes storage cleanup on delete)
 - `src/lib/upload-image.ts` — Image compression + Supabase Storage upload utilities

@@ -1,6 +1,6 @@
 import { createHash } from "crypto";
 import { createServiceClient } from "@/lib/supabase/service";
-import { queryValidateMcpToken } from "@/queries/tokens";
+import { queryValidateMcpToken } from "@/lib/queries/tokens";
 
 function hashToken(raw: string): string {
   return createHash("sha256").update(raw).digest("hex");
