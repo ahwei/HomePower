@@ -8,8 +8,7 @@ const mockEq = vi.fn(() => ({ is: mockIs }));
 const mockSelect = vi.fn(() => ({ eq: mockEq }));
 const mockFrom = vi.fn(() => ({ select: mockSelect }));
 const mockUpdateEq = vi.fn(() => ({ then: vi.fn((cb: () => void) => cb()) }));
-const mockUpdateSet = vi.fn(() => ({ eq: mockUpdateEq }));
-const mockUpdate = vi.fn(() => ({ set: mockUpdateSet }));
+const mockUpdate = vi.fn(() => ({ eq: mockUpdateEq }));
 
 vi.mock("@/lib/supabase/service", () => ({
   createServiceClient: () => ({
@@ -34,8 +33,7 @@ describe("validateMcpToken", () => {
     mockSelect.mockReturnValue({ eq: mockEq });
     mockEq.mockReturnValue({ is: mockIs });
     mockIs.mockReturnValue({ single: mockSingle });
-    mockUpdate.mockReturnValue({ set: mockUpdateSet });
-    mockUpdateSet.mockReturnValue({ eq: mockUpdateEq });
+    mockUpdate.mockReturnValue({ eq: mockUpdateEq });
     mockUpdateEq.mockReturnValue({ then: vi.fn((cb: () => void) => cb()) });
   });
 
