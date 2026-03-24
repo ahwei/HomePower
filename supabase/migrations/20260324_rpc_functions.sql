@@ -180,7 +180,7 @@ DECLARE
 BEGIN
   v_start_date := make_date(p_year, p_month, 1);
   v_end_date := (v_start_date + interval '1 month')::date;
-  v_days_in_month := extract(day FROM v_end_date - v_start_date)::int;
+  v_days_in_month := (v_end_date - v_start_date);
 
   SELECT json_agg(t ORDER BY t.kwh DESC), coalesce(sum(t.kwh), 0)
   INTO v_device_ranking, v_total_kwh
