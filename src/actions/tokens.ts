@@ -1,96 +1,55 @@
 "use server";
 
 import { randomBytes, createHash } from "crypto";
-import { eq, and, isNull, desc } from "drizzle-orm";
-import { authDb } from "@/db";
-import { mcpTokens } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
+import {
+  queryCreateToken,
+  queryRevokeToken,
+  queryGetTokens,
+} from "@/queries/tokens";
 
-async function getUserId(): Promise<string> {
+async function getUserId() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("未登入");
-  return user.id;
+  return { userId: user.id, supabase };
 }
 
 function hashToken(raw: string): string {
   return createHash("sha256").update(raw).digest("hex");
 }
 
-/**
- * 建立新的 MCP API 權杖
- * @returns raw token（僅此一次可見）
- */
 export async function createToken(
   name: string,
   expiresInDays?: number
 ): Promise<{ id: string; rawToken: string; tokenPrefix: string }> {
-  const userId = await getUserId();
+  const { userId, supabase } = await getUserId();
   const raw = `hp_${randomBytes(20).toString("hex")}`;
   const hash = hashToken(raw);
   const prefix = raw.slice(0, 8);
 
   const expiresAt = expiresInDays
-    ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000)
+    ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString()
     : null;
 
-  return authDb(userId, async (tx) => {
-    const [row] = await tx
-      .insert(mcpTokens)
-      .values({
-        userId,
-        name,
-        tokenHash: hash,
-        tokenPrefix: prefix,
-        expiresAt,
-      })
-      .returning({ id: mcpTokens.id });
-
-    return { id: row.id, rawToken: raw, tokenPrefix: prefix };
+  const { id } = await queryCreateToken(supabase, userId, {
+    name,
+    tokenHash: hash,
+    tokenPrefix: prefix,
+    expiresAt,
   });
+
+  return { id, rawToken: raw, tokenPrefix: prefix };
 }
 
-/**
- * 撤銷 token（soft delete）
- */
 export async function revokeToken(tokenId: string): Promise<void> {
-  const userId = await getUserId();
-  await authDb(userId, (tx) =>
-    tx
-      .update(mcpTokens)
-      .set({ revokedAt: new Date() })
-      .where(and(eq(mcpTokens.id, tokenId), eq(mcpTokens.userId, userId)))
-  );
+  const { userId, supabase } = await getUserId();
+  await queryRevokeToken(supabase, userId, tokenId);
 }
 
-/**
- * 列出使用者的所有有效 tokens（不含 hash）
- */
-export async function getTokens(): Promise<
-  Array<{
-    id: string;
-    name: string;
-    tokenPrefix: string;
-    lastUsedAt: Date | null;
-    expiresAt: Date | null;
-    createdAt: Date;
-  }>
-> {
-  const userId = await getUserId();
-  return authDb(userId, (tx) =>
-    tx
-      .select({
-        id: mcpTokens.id,
-        name: mcpTokens.name,
-        tokenPrefix: mcpTokens.tokenPrefix,
-        lastUsedAt: mcpTokens.lastUsedAt,
-        expiresAt: mcpTokens.expiresAt,
-        createdAt: mcpTokens.createdAt,
-      })
-      .from(mcpTokens)
-      .where(and(eq(mcpTokens.userId, userId), isNull(mcpTokens.revokedAt)))
-      .orderBy(desc(mcpTokens.createdAt))
-  );
+export async function getTokens() {
+  const { userId, supabase } = await getUserId();
+  return queryGetTokens(supabase, userId);
 }
