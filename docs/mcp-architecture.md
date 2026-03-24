@@ -10,7 +10,7 @@ graph TB
         OTHER["其他 MCP Client"]
     end
 
-    subgraph Server["HomePower MCP Server (553 行)"]
+    subgraph Server["HomePower MCP Server"]
         ROUTE["POST /api/mcp<br/>Next.js Route Handler"]
         AUTH_MW["Token 認證<br/>extractBearerToken()"]
         VALIDATE["validateMcpToken()<br/>SHA-256 比對"]
@@ -39,7 +39,7 @@ graph TB
     end
 
     subgraph Data["資料來源"]
-        PG["PostgreSQL<br/>(authDb + RLS)"]
+        SB["Supabase PostgREST<br/>(Service Role Client)"]
         TPC["台電 Open Data API"]
         CWA["中央氣象署 API"]
     end
@@ -49,9 +49,9 @@ graph TB
     VALIDATE -- "userId" --> FACTORY
     FACTORY --> TRANSPORT
     TRANSPORT --> Capabilities
-    ToolsGroup -- "withRls()" --> PG
+    ToolsGroup -- "共用查詢模組" --> SB
     MR1 --> TPC
-    MR2 --> PG
+    MR2 --> SB
     MR2 --> CWA
 ```
 
@@ -62,10 +62,10 @@ sequenceDiagram
     participant C as Claude Desktop
     participant R as /api/mcp (Route)
     participant A as Token Auth
-    participant DB as mcp_tokens 表
+    participant DB as Supabase (mcp_tokens)
     participant S as McpServer
     participant T as MCP Tool
-    participant PG as PostgreSQL (RLS)
+    participant Q as 共用查詢模組
 
     C->>R: POST /api/mcp<br/>Authorization: Bearer <token>
     R->>A: extractBearerToken()
@@ -84,8 +84,10 @@ sequenceDiagram
     Note over C,S: JSON-RPC: tools/call "get_devices"
 
     S->>T: execute get_devices
-    T->>PG: authDb(userId) → SELECT with RLS
-    PG-->>T: 使用者的設備資料
+    T->>Q: queryDevicesForTool(supabase, userId)
+    Q->>DB: PostgREST SELECT
+    DB-->>Q: 使用者的設備資料
+    Q-->>T: 格式化後的設備列表
     T-->>S: textResult(devices)
 
     S-->>R: JSON-RPC Response
@@ -166,46 +168,24 @@ graph TB
 
 ## 關鍵程式碼
 
-### Token 認證 — mcp-auth.ts（38 行）
+### Token 認證 — mcp-auth.ts
 
 ```typescript
 // src/lib/mcp-auth.ts
 import { createHash } from "crypto";
-import { eq, and, isNull } from "drizzle-orm";
-import { db } from "@/db";
-import { mcpTokens } from "@/db/schema";
+import { createServiceClient } from "@/lib/supabase/service";
+import { queryValidateMcpToken } from "@/queries/tokens";
 
 function hashToken(raw: string): string {
   return createHash("sha256").update(raw).digest("hex");
 }
 
-/**
- * 驗證 MCP Bearer token，回傳 userId 或 null
- */
 export async function validateMcpToken(
   rawToken: string
 ): Promise<string | null> {
   const hash = hashToken(rawToken);
-
-  const [token] = await db
-    .select()
-    .from(mcpTokens)
-    .where(
-      and(eq(mcpTokens.tokenHash, hash), isNull(mcpTokens.revokedAt))
-    );
-
-  if (!token) return null;
-
-  // 檢查過期
-  if (token.expiresAt && token.expiresAt < new Date()) return null;
-
-  // 更新 lastUsedAt（fire-and-forget）
-  db.update(mcpTokens)
-    .set({ lastUsedAt: new Date() })
-    .where(eq(mcpTokens.id, token.id))
-    .then(() => {});
-
-  return token.userId;
+  const supabase = createServiceClient();
+  return queryValidateMcpToken(supabase, hash);
 }
 ```
 
@@ -239,86 +219,48 @@ function createMcpServer(userId: string): McpServer {
     version: "1.0.0",
   });
 
-  registerTools(server, userId);
-  registerResources(server, userId);
+  const supabase = createServiceClient();
+  registerTools(server, supabase, userId);
+  registerResources(server, supabase, userId);
   registerPrompts(server);
 
   return server;
 }
 ```
 
-### registerTools() — 6 個 MCP Tools（節錄代表性 tool）
+### registerTools() — 使用共用查詢模組
 
 ```typescript
 // src/app/api/mcp/route.ts — registerTools
+import { queryDevicesForTool, queryDeviceSummary, queryEnergySavingTips } from "@/queries/devices";
+import { queryUsageByDateRange, queryMonthlyUsageSummary } from "@/queries/usage-logs";
 
-function registerTools(server: McpServer, userId: string) {
-  const withRls = <T>(fn: (tx: typeof db) => Promise<T>) =>
-    authDb(userId, fn);
-
-  // Tool 1: 查詢設備
-  server.registerTool("get_devices", { description: "查詢使用者的所有家電設備" }, () =>
-    withRls(async (tx) => {
-      const rows = await tx
-        .select()
-        .from(devices)
-        .where(eq(devices.userId, userId))
-        .orderBy(desc(devices.createdAt));
-
-      return textResult(
-        rows.map((d) => ({
-          name: d.name,
-          category: CATEGORY_LABELS[d.category] ?? d.category,
-          ratedPowerW: d.ratedPowerW,
-          dailyHours: Number(d.dailyHours),
-          isActive: d.isActive,
-          monthlyKwh: Math.round(
-            (d.ratedPowerW * Number(d.dailyHours) * 30) / 1000
-          ),
-        }))
-      );
-    })
-  );
+function registerTools(server, supabase, userId) {
+  // Tool 1: 查詢設備 — 呼叫共用查詢函數
+  server.registerTool("get_devices", { description: "查詢使用者的所有家電設備" }, async () => {
+    const data = await queryDevicesForTool(supabase, userId);
+    return textResult(data);
+  });
 
   // Tool 3: 電費計算（帶 Zod inputSchema）
   server.registerTool(
     "calculate_bill",
     {
-      description: "根據用電量計算電費。支援住宅累進制、時間電價二段式、三段式",
+      description: "根據用電量計算電費",
       inputSchema: z.object({
         kwh: z.number().describe("總用電量 kWh"),
-        planType: z
-          .enum(["residential", "time_of_use_2", "time_of_use_3"])
-          .default("residential")
-          .describe("電價方案"),
-        month: z
-          .number()
-          .min(1)
-          .max(12)
-          .optional()
-          .describe("月份（判斷夏月），不填預設當月"),
+        planType: z.enum(["residential", "time_of_use_2", "time_of_use_3"]).default("residential"),
+        month: z.number().min(1).max(12).optional(),
       }),
     },
     async ({ kwh, planType, month }) => {
       const isSummer = isSummerMonth(month);
-      const result = calculateBill({
-        kwh,
-        planType: planType as PlanType,
-        isSummer,
-        peakKwh: Math.round(kwh * 0.6),
-        offPeakKwh: Math.round(kwh * 0.4),
-        midPeakKwh: Math.round(kwh * 0.25),
-      });
-
-      return textResult({
-        ...result,
-        isSummer,
-        note: isSummer ? "夏月費率（6-9月）" : "非夏月費率",
-      });
+      const result = calculateBill({ kwh, planType, isSummer, ... });
+      return textResult({ ...result, isSummer });
     }
   );
 
-  // ... 還有 get_device_summary, get_usage_by_date_range,
+  // ... get_device_summary, get_usage_by_date_range,
   //     get_monthly_usage_summary, get_energy_saving_tips
 }
 ```
@@ -328,91 +270,30 @@ function registerTools(server: McpServer, userId: string) {
 ```typescript
 // src/app/api/mcp/route.ts — registerResources
 
-function registerResources(server: McpServer, userId: string) {
-  const withRls = <T>(fn: (tx: typeof db) => Promise<T>) =>
-    authDb(userId, fn);
-
+function registerResources(server, supabase, userId) {
   // Resource 1: 台電即時供電
   server.registerResource(
     "grid-status",
     "homepower://grid-status",
-    {
-      description: "台灣電力系統即時供電狀態（台電資料）",
-      mimeType: "application/json",
-    },
+    { description: "台灣電力系統即時供電狀態", mimeType: "application/json" },
     async () => {
       const data = await fetchGridStatus();
       return resourceResult("homepower://grid-status", data);
     }
   );
 
-  // Resource 2: 天氣預報
+  // Resource 2: 天氣預報（需要使用者地區設定）
   server.registerResource(
     "weather-forecast",
     "homepower://weather-forecast",
-    {
-      description: "7 天天氣預報與冷氣預估使用時數（中央氣象署資料）",
-      mimeType: "application/json",
-    },
+    { description: "7 天天氣預報與冷氣預估使用時數", mimeType: "application/json" },
     async () => {
-      const settings = await withRls(async (tx) => {
-        const [row] = await tx
-          .select()
-          .from(userSettings)
-          .where(eq(userSettings.userId, userId));
-        return row;
-      });
-
-      const location = settings?.location
-        ? `${settings.location}市`
-        : "高雄市";
+      const settings = await queryGetUserSettings(supabase, userId);
+      const location = settings?.location ? `${settings.location}市` : "高雄市";
       const data = await fetchWeatherForecast(location);
       return resourceResult("homepower://weather-forecast", data);
     }
   );
-}
-```
-
-### registerPrompts() — 3 個提示模板（節錄）
-
-```typescript
-// src/app/api/mcp/route.ts — registerPrompts
-
-function registerPrompts(server: McpServer) {
-  server.registerPrompt(
-    "analyze-monthly",
-    {
-      description: "分析指定月份的用電狀況並提供建議",
-      argsSchema: {
-        year: z.string().describe("年份，例如 2026"),
-        month: z.string().describe("月份 1-12"),
-      },
-    },
-    async ({ year, month }) => ({
-      messages: [
-        {
-          role: "user" as const,
-          content: {
-            type: "text" as const,
-            text: `請分析我 ${year} 年 ${month} 月的用電狀況。
-
-請使用以下工具取得資料：
-1. get_monthly_usage_summary — 取得月度用電摘要
-2. get_device_summary — 取得設備統計
-3. calculate_bill — 用總 kWh 試算電費
-
-然後請提供：
-- 用電概覽（總量、日均、碳排）
-- 各設備用電排名分析
-- 與前月比較的趨勢（如有資料）
-- 具體的節電建議`,
-          },
-        },
-      ],
-    })
-  );
-
-  // ... saving-tips, compare-regions
 }
 ```
 
@@ -445,16 +326,12 @@ export async function POST(request: Request) {
 export async function GET() {
   return new Response(null, { status: 405 }); // 無狀態不支援 SSE
 }
-
-export async function DELETE() {
-  return new Response(null, { status: 405 });
-}
 ```
 
 ## 檔案結構對照
 
 ```
-MCP Server 完整實作 = 553 行（單一檔案）
+MCP Server 架構
 
 src/app/api/mcp/route.ts
 ├── Helpers (50 行)
@@ -464,34 +341,41 @@ src/app/api/mcp/route.ts
 │   ├── resourceResult() ← Resource 回傳格式
 │   └── authenticateRequest() ← Token 驗證入口
 │
-├── MCP Server Factory (12 行)
+├── MCP Server Factory
 │   └── createMcpServer(userId) ← 組裝 tools + resources + prompts
 │
-├── registerTools() (265 行)
-│   ├── get_devices ← 設備清單
-│   ├── get_device_summary ← 統計摘要
-│   ├── calculate_bill ← 電費計算（Zod schema 驗證輸入）
-│   ├── get_usage_by_date_range ← 用電趨勢
-│   ├── get_monthly_usage_summary ← 月報表
-│   └── get_energy_saving_tips ← 節電建議
+├── registerTools()
+│   ├── get_devices ← queryDevicesForTool()
+│   ├── get_device_summary ← queryDeviceSummary()
+│   ├── calculate_bill ← calculateBill()（純計算）
+│   ├── get_usage_by_date_range ← queryUsageByDateRange()
+│   ├── get_monthly_usage_summary ← queryMonthlyUsageSummary()
+│   └── get_energy_saving_tips ← queryEnergySavingTips()
 │
-├── registerResources() (53 行)
-│   ├── homepower://grid-status ← 台電即時供電 API
-│   └── homepower://weather-forecast ← 氣象署 + 使用者所在地
+├── registerResources()
+│   ├── homepower://grid-status ← fetchGridStatus()
+│   └── homepower://weather-forecast ← queryGetUserSettings() + fetchWeatherForecast()
 │
-├── registerPrompts() (90 行)
+├── registerPrompts()
 │   ├── analyze-monthly ← 月度分析模板
 │   ├── saving-tips ← 節電建議模板
 │   └── compare-regions ← 地區比較模板
 │
-└── Route Handlers (40 行)
+└── Route Handlers
     ├── POST → handleMcpRequest() ← 主要入口
     ├── GET → 405 ← 無狀態模式不支援 SSE
     └── DELETE → 405
 
+共用查詢模組（MCP + Chat 共用）：
+├── src/queries/devices.ts ← 設備查詢 + 摘要 + 節電建議
+├── src/queries/usage-logs.ts ← 用電 RPC 函數
+├── src/queries/tokens.ts ← Token 驗證
+└── src/queries/user-settings.ts ← 使用者設定
+
 相關檔案：
 ├── src/lib/mcp-auth.ts ← SHA-256 Token 驗證
-├── src/app/actions/tokens.ts ← Token CRUD Server Actions
+├── src/lib/supabase/service.ts ← Service role client
+├── src/actions/tokens.ts ← Token CRUD Server Actions
 ├── src/lib/grid-status.ts ← 台電 API 抓取 + 解析
 └── src/lib/weather.ts ← 氣象署 API 抓取 + 解析
 ```
