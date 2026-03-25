@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useGetUsageLogsQuery } from "@/store/api/usage-logs-api";
 import { UsageLogsFilters, type FilterValues } from "./usage-logs-filters";
 import { UsageLogsTable } from "./usage-logs-table";
@@ -9,6 +9,7 @@ import { UsageLogsSummaryCards } from "./usage-logs-summary";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import type { UsageLogsResult } from "@/lib/queries/usage-logs";
 
 function getDefaultFilters(): FilterValues & { page: number; pageSize: number } {
   const today = new Date();
@@ -26,8 +27,13 @@ function getDefaultFilters(): FilterValues & { page: number; pageSize: number } 
   };
 }
 
-export function UsageLogsView() {
+interface UsageLogsViewProps {
+  initialData?: UsageLogsResult;
+}
+
+export function UsageLogsView({ initialData }: UsageLogsViewProps) {
   const [filters, setFilters] = useState(getDefaultFilters);
+  const hasInteracted = useRef(false);
 
   const queryParams = useMemo(
     () => ({
@@ -42,21 +48,33 @@ export function UsageLogsView() {
     [filters]
   );
 
-  const { data, isLoading, error } = useGetUsageLogsQuery(queryParams);
+  const useServerData = !!initialData && !hasInteracted.current;
+
+  const { data: clientData, isLoading: clientLoading, error } = useGetUsageLogsQuery(
+    queryParams,
+    { skip: useServerData }
+  );
+
+  const data = useServerData ? initialData : clientData;
+  const isLoading = useServerData ? false : clientLoading;
 
   function handleFilterChange(next: FilterValues) {
+    hasInteracted.current = true;
     setFilters((prev) => ({ ...prev, ...next, page: 1 }));
   }
 
   function handleReset() {
+    hasInteracted.current = true;
     setFilters(getDefaultFilters());
   }
 
   function handlePageChange(page: number) {
+    hasInteracted.current = true;
     setFilters((prev) => ({ ...prev, page }));
   }
 
   function handlePageSizeChange(pageSize: number) {
+    hasInteracted.current = true;
     setFilters((prev) => ({ ...prev, pageSize, page: 1 }));
   }
 

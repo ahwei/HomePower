@@ -1,13 +1,20 @@
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Separator } from "@/components/ui/separator";
 import { GridStatusBanner } from "@/components/dashboard/grid-status-banner";
-import { EnergyOverviewCards } from "@/components/dashboard/energy-overview-cards";
-import { DeviceConsumptionChart } from "@/components/dashboard/device-consumption-chart";
-import { DailyUsageChart } from "@/components/dashboard/daily-usage-chart";
-import { WeeklyUsageChart } from "@/components/dashboard/weekly-usage-chart";
-import { MonthlyUsageChart } from "@/components/dashboard/monthly-usage-chart";
-import { TopDevicesChart } from "@/components/dashboard/top-devices-chart";
+import {
+  DailyChartSection,
+  DeviceConsumptionSection,
+  EnergyOverviewSection,
+  MonthlyChartSection,
+  TopDevicesSection,
+  WeeklyChartSection,
+} from "@/components/dashboard/server-sections";
+import {
+  CardSkeleton,
+  OverviewCardsSkeleton,
+} from "@/components/dashboard/skeletons";
 import { WeatherForecastStrip } from "@/components/dashboard/weather-forecast-strip";
+import { Separator } from "@/components/ui/separator";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Suspense } from "react";
 
 export default function DashboardPage() {
   return (
@@ -19,16 +26,33 @@ export default function DashboardPage() {
       </header>
       <main className="flex-1 space-y-6 p-6">
         <GridStatusBanner />
-        <EnergyOverviewCards />
+
+        <Suspense fallback={<OverviewCardsSkeleton />}>
+          <EnergyOverviewSection />
+        </Suspense>
+
         <div className="grid gap-4 lg:grid-cols-2">
-          <WeeklyUsageChart />
-          <MonthlyUsageChart />
+          <Suspense fallback={<CardSkeleton />}>
+            <WeeklyChartSection />
+          </Suspense>
+          <Suspense fallback={<CardSkeleton />}>
+            <MonthlyChartSection />
+          </Suspense>
         </div>
+
         <div className="grid gap-4 lg:grid-cols-2">
-          <DeviceConsumptionChart />
-          <TopDevicesChart />
+          <Suspense fallback={<CardSkeleton height="h-48" />}>
+            <DeviceConsumptionSection />
+          </Suspense>
+          <Suspense fallback={<CardSkeleton />}>
+            <TopDevicesSection />
+          </Suspense>
         </div>
-        <DailyUsageChart />
+
+        <Suspense fallback={<CardSkeleton />}>
+          <DailyChartSection />
+        </Suspense>
+
         <WeatherForecastStrip />
       </main>
     </>

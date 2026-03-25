@@ -83,6 +83,7 @@ export const usageLogsApi = createApi({
           };
         }
       },
+      keepUnusedDataFor: 300,
     }),
 
     getMonthlyTrend: builder.query<
@@ -102,6 +103,7 @@ export const usageLogsApi = createApi({
           };
         }
       },
+      keepUnusedDataFor: 300,
     }),
 
     getCategoryUsage: builder.query<
@@ -121,6 +123,7 @@ export const usageLogsApi = createApi({
           };
         }
       },
+      keepUnusedDataFor: 300,
     }),
   }),
 });

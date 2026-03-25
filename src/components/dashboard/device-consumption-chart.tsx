@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetDevicesQuery } from "@/store/api/devices-api";
 import { computeMonthlyKwh } from "@/lib/types";
-import type { DeviceCategory } from "@/lib/types";
+import type { Device, DeviceCategory } from "@/lib/types";
 
 const CATEGORY_COLORS: Record<DeviceCategory, string> = {
   aircon: "#3b82f6",
@@ -32,9 +32,16 @@ interface ChartEntry {
   percent: number;
 }
 
+interface Props {
+  devices?: Device[];
+}
+
 export const DeviceConsumptionChart = React.memo(
-  function DeviceConsumptionChart() {
-    const { data: devices = [], isLoading } = useGetDevicesQuery();
+  function DeviceConsumptionChart({ devices: serverDevices }: Props) {
+    const { data: clientDevices, isLoading } = useGetDevicesQuery(undefined, {
+      skip: !!serverDevices,
+    });
+    const devices = serverDevices ?? clientDevices ?? [];
 
     const { entries, totalKwh } = useMemo(() => {
       const active = devices.filter((d) => d.isActive);
@@ -52,7 +59,7 @@ export const DeviceConsumptionChart = React.memo(
       return { entries: items, totalKwh: Math.round(total) };
     }, [devices]);
 
-    if (isLoading) {
+    if (!serverDevices && isLoading) {
       return (
         <Card>
           <CardHeader>
