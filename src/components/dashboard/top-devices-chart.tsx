@@ -17,8 +17,15 @@ const COLORS = [
   "#fb7185", "#fbbf24", "#2dd4bf", "#818cf8",
 ];
 
-export function TopDevicesChart() {
-  const { data: raw = [], isLoading } = useGetCategoryUsageQuery();
+interface Props {
+  data?: { category: string; deviceName: string; kwh: number }[];
+}
+
+export function TopDevicesChart({ data: serverData }: Props) {
+  const { data: clientData, isLoading } = useGetCategoryUsageQuery(undefined, {
+    skip: !!serverData,
+  });
+  const raw = serverData ?? clientData ?? [];
 
   const data = raw.slice(0, 8).map((r, i) => ({
     name: r.deviceName,
@@ -26,7 +33,7 @@ export function TopDevicesChart() {
     fill: COLORS[i % COLORS.length],
   }));
 
-  if (isLoading) {
+  if (!serverData && isLoading) {
     return (
       <Card>
         <CardHeader>

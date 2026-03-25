@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetDevicesQuery } from "@/store/api/devices-api";
 import { useAppSelector } from "@/hooks/use-store";
-import { computeMonthlyKwh } from "@/lib/types";
+import { computeMonthlyKwh, type Device } from "@/lib/types";
 import { calculateResidentialBill } from "@/components/billing/calculate-bill";
 import { isSummerMonth } from "@/constants/electricity-plans";
 import { CO2_FACTOR_KG_PER_KWH } from "@/constants/device-presets";
@@ -26,8 +26,15 @@ function CardSkeleton() {
   );
 }
 
-export function EnergyOverviewCards() {
-  const { data: devices = [], isLoading } = useGetDevicesQuery();
+interface Props {
+  devices?: Device[];
+}
+
+export function EnergyOverviewCards({ devices: serverDevices }: Props) {
+  const { data: clientDevices, isLoading } = useGetDevicesQuery(undefined, {
+    skip: !!serverDevices,
+  });
+  const devices = serverDevices ?? clientDevices ?? [];
   const settings = useAppSelector((s) => s.settings);
 
   const stats = useMemo(() => {
@@ -48,7 +55,7 @@ export function EnergyOverviewCards() {
     };
   }, [devices, settings.planType]);
 
-  if (isLoading) {
+  if (!serverDevices && isLoading) {
     return (
       <div className="grid gap-4 md:grid-cols-3">
         <CardSkeleton />

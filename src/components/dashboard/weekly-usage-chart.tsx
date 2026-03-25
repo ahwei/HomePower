@@ -21,8 +21,15 @@ function formatDateLabel(dateStr: string): string {
   return `${d.getMonth() + 1}/${d.getDate()} (${weekday})`;
 }
 
-export function WeeklyUsageChart() {
-  const { data: raw = [], isLoading } = useGetWeeklyTrendQuery();
+interface Props {
+  data?: { date: string; kwh: number }[];
+}
+
+export function WeeklyUsageChart({ data: serverData }: Props) {
+  const { data: clientData, isLoading } = useGetWeeklyTrendQuery(undefined, {
+    skip: !!serverData,
+  });
+  const raw = serverData ?? clientData ?? [];
 
   const data = raw.map((r) => ({
     ...r,
@@ -30,7 +37,7 @@ export function WeeklyUsageChart() {
     kwh: Math.round(r.kwh * 10) / 10,
   }));
 
-  if (isLoading) {
+  if (!serverData && isLoading) {
     return (
       <Card>
         <CardHeader>

@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetDevicesQuery } from "@/store/api/devices-api";
 import { useAppSelector } from "@/hooks/use-store";
+import type { Device } from "@/lib/types";
 
 interface HourlyData {
   hour: number;
@@ -22,43 +23,49 @@ interface HourlyData {
   kwh: number;
 }
 
-function useEstimatedHourlyData(): HourlyData[] {
-  const { data: devices = [] } = useGetDevicesQuery();
+function computeHourlyData(devices: Device[]): HourlyData[] {
+  const hourly = Array.from({ length: 24 }, (_, h) => ({
+    hour: h,
+    label: `${h}:00`,
+    kwh: 0,
+  }));
 
-  return useMemo(() => {
-    const hourly = Array.from({ length: 24 }, (_, h) => ({
-      hour: h,
-      label: `${h}:00`,
-      kwh: 0,
-    }));
-
-    const active = devices.filter((d) => d.isActive);
-    for (const d of active) {
-      const kwhPerHour = d.ratedPowerW / 1000;
-      const startHour = 8;
-      const hours = Math.min(Math.round(d.dailyHours), 24);
-      for (let i = 0; i < hours; i++) {
-        const h = (startHour + i) % 24;
-        hourly[h].kwh += kwhPerHour;
-      }
+  const active = devices.filter((d) => d.isActive);
+  for (const d of active) {
+    const kwhPerHour = d.ratedPowerW / 1000;
+    const startHour = 8;
+    const hours = Math.min(Math.round(d.dailyHours), 24);
+    for (let i = 0; i < hours; i++) {
+      const h = (startHour + i) % 24;
+      hourly[h].kwh += kwhPerHour;
     }
+  }
 
-    for (const h of hourly) {
-      h.kwh = Math.round(h.kwh * 100) / 100;
-    }
+  for (const h of hourly) {
+    h.kwh = Math.round(h.kwh * 100) / 100;
+  }
 
-    return hourly;
-  }, [devices]);
+  return hourly;
 }
 
-export function DailyUsageChart() {
-  const { isLoading } = useGetDevicesQuery();
-  const data = useEstimatedHourlyData();
+interface Props {
+  devices?: Device[];
+}
+
+export function DailyUsageChart({ devices: serverDevices }: Props) {
+  const { data: clientDevices, isLoading } = useGetDevicesQuery(undefined, {
+    skip: !!serverDevices,
+  });
+  const devices = useMemo(
+    () => serverDevices ?? clientDevices ?? [],
+    [serverDevices, clientDevices]
+  );
+  const data = useMemo(() => computeHourlyData(devices), [devices]);
   const planType = useAppSelector((s) => s.settings.planType);
   const showPeakZones = planType !== "residential";
   const hasData = data.some((d) => d.kwh > 0);
 
-  if (isLoading) {
+  if (!serverDevices && isLoading) {
     return (
       <Card>
         <CardHeader>

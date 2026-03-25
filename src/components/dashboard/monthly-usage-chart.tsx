@@ -24,8 +24,15 @@ function isSummer(ym: string): boolean {
   return month >= 6 && month <= 9;
 }
 
-export function MonthlyUsageChart() {
-  const { data: raw = [], isLoading } = useGetMonthlyTrendQuery();
+interface Props {
+  data?: { month: string; kwh: number }[];
+}
+
+export function MonthlyUsageChart({ data: serverData }: Props) {
+  const { data: clientData, isLoading } = useGetMonthlyTrendQuery(undefined, {
+    skip: !!serverData,
+  });
+  const raw = serverData ?? clientData ?? [];
 
   const data = raw.map((r) => ({
     ...r,
@@ -34,7 +41,7 @@ export function MonthlyUsageChart() {
     summer: isSummer(r.month),
   }));
 
-  if (isLoading) {
+  if (!serverData && isLoading) {
     return (
       <Card>
         <CardHeader>
