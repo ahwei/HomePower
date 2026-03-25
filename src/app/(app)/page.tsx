@@ -1,21 +1,20 @@
-import { Suspense } from "react";
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
 import { GridStatusBanner } from "@/components/dashboard/grid-status-banner";
-import { WeatherForecastStrip } from "@/components/dashboard/weather-forecast-strip";
+import {
+  DailyChartSection,
+  DeviceConsumptionSection,
+  EnergyOverviewSection,
+  MonthlyChartSection,
+  TopDevicesSection,
+  WeeklyChartSection,
+} from "@/components/dashboard/server-sections";
 import {
   CardSkeleton,
   OverviewCardsSkeleton,
 } from "@/components/dashboard/skeletons";
-import {
-  EnergyOverviewSection,
-  WeeklyChartSection,
-  MonthlyChartSection,
-  DeviceConsumptionSection,
-  TopDevicesSection,
-  DailyChartSection,
-} from "@/components/dashboard/server-sections";
+import { WeatherForecastStrip } from "@/components/dashboard/weather-forecast-strip";
+import { Separator } from "@/components/ui/separator";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Suspense } from "react";
 
 export default function DashboardPage() {
   return (
