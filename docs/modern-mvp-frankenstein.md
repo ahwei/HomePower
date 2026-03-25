@@ -39,7 +39,7 @@ MVP 的核心目的是**驗證想法**，不是寫完美的程式碼。你花三
 
 **4. 隨時可以「拆掉重縫」**
 
-縫合怪不代表技術債。每個工具都是獨立的模組，不滿意隨時可以換。Auth 從 Supabase 換成 Clerk？換一層就好。ORM 從 Prisma 換成 Drizzle？我就真的換過，而且只花了半天。這比重構一個自建的 monolith 輕鬆太多。
+縫合怪不代表技術債。每個工具都是獨立的模組，不滿意隨時可以換。Auth 從 Supabase 換成 Clerk？換一層就好。ORM 從 Prisma 換成 Supabase PostgREST？我就真的換過，而且只花了半天。這比重構一個自建的 monolith 輕鬆太多。
 
 **5. AI 加持下效率再翻倍**
 
@@ -50,7 +50,7 @@ MVP 的核心目的是**驗證想法**，不是寫完美的程式碼。你花三
 | 項目     | 傳統開發                       | 縫合怪                        |
 | -------- | ------------------------------ | ----------------------------- |
 | Auth     | 自建 JWT + session 管理        | Supabase Auth（一行搞定）     |
-| Database | 自架 PostgreSQL + 寫 migration | Supabase DB + Drizzle ORM     |
+| Database | 自架 PostgreSQL + 寫 migration | Supabase DB + PostgREST + RPC |
 | Storage  | 自建 S3 + CDN                  | Supabase Storage              |
 | UI 元件  | 從零刻 or 買 UI kit            | shadcn/ui（複製貼上即擁有）   |
 | AI 聊天  | 自串 OpenAI + 處理 streaming   | Vercel AI SDK（382 行全搞定） |
@@ -113,7 +113,7 @@ MVP 的核心目的是**驗證想法**，不是寫完美的程式碼。你花三
 使用者 → Next.js 16 (App Router)
               ├── Supabase Auth（登入驗證）
               ├── Supabase Storage（圖片儲存）
-              ├── PostgreSQL + Drizzle ORM（資料庫）
+              ├── Supabase PostgREST + RPC（資料庫）
               ├── Vercel AI SDK + OpenAI（AI 聊天）
               ├── MCP Server（外部 AI 存取）
               └── shadcn/ui（UI 元件）
@@ -127,7 +127,7 @@ MVP 的核心目的是**驗證想法**，不是寫完美的程式碼。你花三
 | 語言      | TypeScript strict           | 型別安全，AI 也比較好幫你寫 code             |
 | 樣式      | Tailwind CSS v4 + shadcn/ui | 零設計稿也能做出好看的 UI                    |
 | 後端服務  | Supabase                    | Auth + DB + Storage 一站搞定                 |
-| ORM       | Drizzle ORM                 | 輕量、型別安全、支援 RLS                     |
+| 資料存取  | Supabase PostgREST + RPC    | 輕量、型別安全、原生支援 RLS                 |
 | 狀態管理  | Redux Toolkit               | 不是最潮但最穩                               |
 | 圖表      | Recharts                    | React 生態圈最成熟的圖表庫                   |
 | 表單      | react-hook-form + Zod v4    | 驗證邏輯跟 AI SDK tool schema 共用           |
@@ -156,31 +156,32 @@ const { data } = await supabase
 
 Supabase Client 會把使用者的 JWT token 帶給 PostgreSQL，資料庫根據 RLS policy 自動過濾。使用者 A 永遠看不到使用者 B 的資料。**零行安全程式碼，資料庫幫你搞定。**
 
-但我這個專案用的是 **Drizzle ORM**（為了型別安全和更靈活的查詢），Drizzle 直接連 PostgreSQL，繞過了 Supabase Client，所以 RLS 不會自動生效。怎麼辦？自己寫一個 38 行的 wrapper：
+現在專案直接使用 **Supabase PostgREST + RPC**，透過 Supabase Client 發送查詢，RLS 自動生效：
 
 ```typescript
-// src/db/index.ts — 自製 RLS wrapper
-export async function authDb<T>(
-  userId: string,
-  fn: (tx: typeof db) => Promise<T>,
-): Promise<T> {
-  return db.transaction(async (tx) => {
-    // 手動模擬 Supabase Client 的行為：
-    // 告訴 PostgreSQL「我是 authenticated 角色」
-    await tx.execute(sql`SELECT set_config('role', 'authenticated', true)`);
-    // 注入 JWT claims，讓 auth.uid() 回傳正確的 userId
-    await tx.execute(
-      sql`SELECT set_config('request.jwt.claims', ${JSON.stringify({ sub: userId })}, true)`,
-    );
-    // 現在所有查詢都會經過 RLS 過濾，跟用 Supabase Client 一樣安全
-    return fn(tx as unknown as typeof db);
+// src/lib/queries/devices.ts — 使用 Supabase PostgREST
+export async function queryDevices(supabase: Supabase, userId: string) {
+  const { data, error } = await supabase
+    .from("devices")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []).map(toDevice);
+}
+
+// 複雜聚合查詢使用 RPC
+export async function queryWeeklyUsageTrend(supabase: Supabase, userId: string) {
+  const { data, error } = await supabase.rpc("get_weekly_usage_trend", {
+    p_user_id: userId,
   });
+  if (error) throw error;
+  return data ?? [];
 }
 ```
 
-本質上就是在每個 transaction 開始前，手動做了 Supabase Client 自動做的事：設定 PostgreSQL 的 `role` 和 `request.jwt.claims`，讓 RLS policy 能正確判斷「這個查詢是誰發的」。
-
-整個專案裡，只要涉及使用者資料的查詢，都用 `authDb()` 包一層。如果哪天想換回 Supabase Client，直接把 `authDb()` 的查詢改成 `supabase.from(...)` 就好，RLS policy 不用動。
+Supabase Client 會把使用者的 JWT token 帶給 PostgreSQL，RLS policy 自動過濾資料。簡單 CRUD 用 PostgREST，複雜的 GROUP BY、JOIN 聚合查詢用 PostgreSQL RPC 函式。
 
 **補充：已經用 Auth0 的團隊怎麼辦？**
 
@@ -242,11 +243,11 @@ HomePower 用到的主要是聊天相關元件：
 - **TypeScript** strict mode
 - **Tailwind CSS v4** + **shadcn/ui**
 - **Supabase** — Auth + Storage
-- **Drizzle ORM** + RLS enforced via `authDb()`
+- **Supabase PostgREST + RPC** — RLS 自動生效
 
 ## Key Files
 
-- `src/db/index.ts` — Drizzle DB singleton + RLS wrapper
+- `src/lib/queries/` — Supabase PostgREST + RPC 查詢模組
 - `src/app/api/chat/route.ts` — AI SDK streaming 核心
 - `src/app/api/mcp/route.ts` — MCP server 完整實作
 
@@ -596,11 +597,11 @@ const { messages, input, handleSubmit, isLoading } = useChat({
 
 ### 踩過的坑
 
-**坑 1：Prisma → Drizzle 遷移**
+**坑 1：ORM → Supabase PostgREST 遷移**
 
-一開始用 Prisma，後來發現它不支援 Supabase 的 RLS（Row Level Security）。Drizzle ORM 可以直接執行 raw SQL，所以能做到 `set_config('role', 'authenticated', true)` 這種操作。
+一開始用 Prisma，後來換成 Drizzle ORM，最後發現直接用 Supabase PostgREST + RPC 最簡單。PostgREST 原生支援 RLS，不需要額外 wrapper。複雜聚合用 PostgreSQL RPC 函式，簡單 CRUD 用 PostgREST。
 
-教訓：**選 ORM 要看它跟你的後端服務合不合**，不是看誰星星多。
+教訓：**能用平台原生方案就用原生方案**，不要為了型別安全多加一層 ORM。
 
 **坑 2：OAuth → Email/Password 簡化**
 
@@ -647,7 +648,7 @@ const { messages, input, handleSubmit, isLoading } = useChat({
 ```
 Next.js 16 ─── 框架骨架
      ├── Supabase ─── Auth + DB + Storage（內臟）
-     ├── Drizzle ORM ─── 資料存取 + RLS（血管）
+     ├── PostgREST + RPC ─── 資料存取 + RLS（血管）
      ├── shadcn/ui ─── UI 元件（皮膚）
      ├── Vercel AI SDK ─── AI 聊天（大腦）
      ├── MCP Server ─── 外部 AI 存取（神經系統）

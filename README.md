@@ -2,6 +2,16 @@
 
 A full-stack home energy management dashboard with AI-powered electricity bill optimization, built with Next.js, Supabase, and Vercel AI SDK.
 
+## Screenshots
+
+| Dashboard | Devices |
+|:---------:|:-------:|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Devices](docs/screenshots/devices.png) |
+
+| Billing | AI Chat |
+|:-------:|:-------:|
+| ![Billing](docs/screenshots/billing.png) | ![Chat](docs/screenshots/chat.png) |
+
 ## Features
 
 - **Real-time Grid Status** — Live Taiwan Power Company (台電) supply/demand status with color-coded indicators
@@ -18,7 +28,7 @@ A full-stack home energy management dashboard with AI-powered electricity bill o
 | Framework | Next.js 16 (App Router, React 19, Turbopack) |
 | Language | TypeScript (strict mode) |
 | Styling | Tailwind CSS v4 + shadcn/ui |
-| ORM | Drizzle ORM + pg |
+| Database Access | Supabase PostgREST + RPC |
 | State | Redux Toolkit |
 | Database | Supabase (PostgreSQL) |
 | Auth | Supabase Auth (Email/Password) |
@@ -71,13 +81,11 @@ Open [http://localhost:8088](http://localhost:8088).
 
 ### Database Setup
 
-使用 Drizzle ORM 管理資料庫 schema（定義在 `src/db/schema.ts`）：
+使用 Supabase Dashboard 管理資料庫，migration 檔案在 `supabase/migrations/`：
 
-```bash
-pnpm db:push      # 將 schema 推送到資料庫（開發用）
-pnpm db:generate  # 產生 migration 檔案
-pnpm db:studio    # 開啟 Drizzle Studio（DB GUI）
-```
+- **PostgREST** — 簡單 CRUD：`supabase.from('table').select/insert/update/delete`
+- **RPC** — 複雜聚合查詢：`supabase.rpc('function_name', params)`
+- **RPC 函式** 定義在 `supabase/migrations/20260324_rpc_functions.sql`
 
 ## Project Structure
 
@@ -102,10 +110,9 @@ src/
 │   ├── dashboard/         # Dashboard feature components
 │   └── billing/           # Billing feature components
 ├── constants/             # App constants (device presets, electricity plans)
-├── db/                    # Drizzle ORM schema + singleton instance
 ├── hooks/                 # Shared React hooks
 ├── store/                 # Redux Toolkit store, slices, provider
-└── lib/                   # Utilities (cn, types, supabase clients)
+└── lib/                   # Utilities (cn, types, supabase clients, queries)
 ```
 
 ## Simulated Devices

@@ -25,7 +25,19 @@ async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 /** DB row → Device 型別轉換 */
-function mapRow(row: Awaited<ReturnType<typeof getDevices>>[number]): Device {
+function mapRow(row: {
+  id: string;
+  userId: string;
+  name: string;
+  category: string;
+  ratedPowerW: number;
+  dailyHours: number;
+  imageUrl?: string | null;
+  isActive: boolean;
+  schedule?: { start: string; end: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}): Device {
   return {
     id: row.id,
     userId: row.userId,
@@ -35,7 +47,7 @@ function mapRow(row: Awaited<ReturnType<typeof getDevices>>[number]): Device {
     dailyHours: row.dailyHours,
     imageUrl: row.imageUrl,
     isActive: row.isActive,
-    schedule: row.schedule as Device["schedule"],
+    schedule: row.schedule ?? undefined,
     createdAt: String(row.createdAt),
     updatedAt: String(row.updatedAt),
   };
@@ -61,6 +73,7 @@ export const devicesApi = createApi({
         }
       },
       providesTags: ["Devices"],
+      keepUnusedDataFor: 300,
     }),
 
     addDevice: builder.mutation<

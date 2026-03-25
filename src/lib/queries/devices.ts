@@ -4,6 +4,7 @@ import {
   CATEGORY_LABELS,
   CO2_FACTOR_KG_PER_KWH,
 } from "@/constants/device-presets";
+import type { DeviceCategory } from "@/lib/types";
 
 type Supabase = SupabaseClient<Database>;
 type DeviceRow = Database["public"]["Tables"]["devices"]["Row"];
@@ -14,12 +15,12 @@ function toDevice(r: DeviceRow) {
     id: r.id,
     userId: r.user_id,
     name: r.name,
-    category: r.category,
+    category: r.category as DeviceCategory,
     ratedPowerW: r.rated_power_w,
     dailyHours: Number(r.daily_hours),
     imageUrl: r.image_url,
     isActive: r.is_active,
-    schedule: r.schedule as { start: string; end: string } | null,
+    schedule: (r.schedule as { start: string; end: string } | null) ?? undefined,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
