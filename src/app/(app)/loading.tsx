@@ -1,0 +1,33 @@
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  CardSkeleton,
+  OverviewCardsSkeleton,
+} from "@/components/dashboard/skeletons";
+
+export default function DashboardLoading() {
+  return (
+    <>
+      <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+        <SidebarTrigger className="-ml-1" />
+        <Separator orientation="vertical" className="mr-2 h-4" />
+        <h1 className="text-lg font-semibold">Dashboard</h1>
+      </header>
+      <main className="flex-1 space-y-6 p-6">
+        <Skeleton className="h-12 w-full rounded-lg" />
+        <OverviewCardsSkeleton />
+        <div className="grid gap-4 lg:grid-cols-2">
+          <CardSkeleton />
+          <CardSkeleton />
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <CardSkeleton height="h-48" />
+          <CardSkeleton />
+        </div>
+        <CardSkeleton />
+        <Skeleton className="h-32 w-full rounded-lg" />
+      </main>
+    </>
+  );
+}
